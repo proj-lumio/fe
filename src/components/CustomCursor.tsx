@@ -7,20 +7,27 @@ export function CustomCursor() {
     const cursor = cursorRef.current
     if (!cursor) return
 
-    let x = 0
-    let y = 0
+    // Hidden until first mouse move
+    let hasMoved = false
 
     const move = (e: MouseEvent) => {
-      x = e.clientX
-      y = e.clientY
-      cursor.style.left = `${x}px`
-      cursor.style.top = `${y}px`
+      if (!hasMoved) {
+        hasMoved = true
+        cursor.style.opacity = "1"
+      }
+      cursor.style.left = `${e.clientX}px`
+      cursor.style.top = `${e.clientY}px`
     }
+
+    const hide = () => { cursor.style.opacity = "0" }
+    const show = () => { if (hasMoved) cursor.style.opacity = "1" }
 
     const addHover = () => cursor.classList.add("hovering")
     const removeHover = () => cursor.classList.remove("hovering")
 
     document.addEventListener("mousemove", move)
+    document.addEventListener("mouseleave", hide)
+    document.addEventListener("mouseenter", show)
 
     const observe = () => {
       const interactives = document.querySelectorAll(
@@ -38,9 +45,11 @@ export function CustomCursor() {
 
     return () => {
       document.removeEventListener("mousemove", move)
+      document.removeEventListener("mouseleave", hide)
+      document.removeEventListener("mouseenter", show)
       observer.disconnect()
     }
   }, [])
 
-  return <div ref={cursorRef} id="lumio-cursor" />
+  return <div ref={cursorRef} id="lumio-cursor" style={{ opacity: 0 }} />
 }

@@ -1,9 +1,10 @@
 import * as React from "react"
+import { useState } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -20,8 +21,8 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-lg px-3 text-xs",
-        lg: "h-10 rounded-lg px-8",
+        sm: "h-8 px-3 text-xs",
+        lg: "h-10 px-8",
         icon: "h-9 w-9",
       },
     },
@@ -39,11 +40,31 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, style, onPointerDown, onPointerUp, onPointerLeave, ...props }, ref) => {
+    const [pressed, setPressed] = useState(false)
+
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        style={{
+          borderRadius: 12,
+          transform: pressed ? "scale(0.98)" : "scale(1)",
+          transition: "transform 200ms ease-out",
+          ...style,
+        }}
+        onPointerDown={(e) => {
+          setPressed(true)
+          onPointerDown?.(e)
+        }}
+        onPointerUp={(e) => {
+          setPressed(false)
+          onPointerUp?.(e)
+        }}
+        onPointerLeave={(e) => {
+          setPressed(false)
+          onPointerLeave?.(e)
+        }}
         {...props}
       />
     )
