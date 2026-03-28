@@ -21,7 +21,7 @@ export default function Landing() {
 
   function goToLogin() {
     setTransitioning(true)
-    setTimeout(() => navigate("/login", { state: { email } }), 700)
+    setTimeout(() => navigate("/auth", { state: { email } }), 700)
   }
 
   function handleSubmit(e: React.FormEvent) {

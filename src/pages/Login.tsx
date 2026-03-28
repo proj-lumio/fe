@@ -7,12 +7,14 @@ import { OpenSourceBanner } from "@/components/OpenSourceBanner"
 import { useTranslations } from "@/hooks/useTranslations"
 import { validateEmail, validatePassword } from "@/lib/validators"
 import { ArrowRight, Loader2 } from "lucide-react"
+import type { AxiosError } from "axios"
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const t = useTranslations()
-  const setUser = useAuthStore((s) => s.setUser)
+  const login = useAuthStore((s) => s.login)
+  const register = useAuthStore((s) => s.register)
 
   const [mode, setMode] = useState<"login" | "register">("login")
   const [email, setEmail] = useState("")
@@ -22,6 +24,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [confirmError, setConfirmError] = useState("")
+  const [formError, setFormError] = useState("")
   const [entered, setEntered] = useState(false)
   const [switching, setSwitching] = useState(false)
 
@@ -43,6 +46,7 @@ export default function Login() {
       setEmailError("")
       setPasswordError("")
       setConfirmError("")
+      setFormError("")
       setTimeout(() => setSwitching(false), 50)
     }, 200)
   }
@@ -73,16 +77,23 @@ export default function Login() {
     if (hasError) return
 
     setLoading(true)
-    setTimeout(() => {
-      setUser({
-        uid: "user-1",
-        email,
-        displayName: email.split("@")[0],
-        photoURL: null,
-      })
-      setLoading(false)
-      navigate("/dashboard")
-    }, 600)
+    setFormError("")
+    ;(async () => {
+      try {
+        if (mode === "login") {
+          await login(email, password)
+        } else {
+          await register(email, password, email.split("@")[0])
+        }
+        navigate("/dashboard")
+      } catch (err) {
+        const axiosErr = err as AxiosError<{ detail?: string }>
+        const detail = axiosErr.response?.data?.detail
+        setFormError(detail ?? (mode === "login" ? t.login.login_failed : t.login.register_failed))
+      } finally {
+        setLoading(false)
+      }
+    })()
   }
 
   const isLogin = mode === "login"
@@ -252,6 +263,10 @@ export default function Login() {
                 {isLogin ? t.login.submit : t.login.register}
                 {!loading && <ArrowRight className="h-4 w-4" />}
               </button>
+
+              {formError && (
+                <p className="mt-2 text-center text-[11px] text-red-400">{formError}</p>
+              )}
             </form>
 
             {/* Switch mode */}
