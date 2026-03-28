@@ -81,7 +81,7 @@ export default function Companies() {
       className="pt-2 transition-all duration-500"
       style={{
         opacity: entered ? 1 : 0,
-        transform: entered ? "translateY(0) scale(1)" : "translateY(20px) scale(0.95)",
+        transform: entered ? "none" : "translateY(20px) scale(0.95)",
         filter: entered ? "none" : "blur(12px)",
       }}
     >
@@ -111,8 +111,8 @@ export default function Companies() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
-          <div className="liquid-card-strong w-full max-w-lg p-6 sm:p-8 my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="liquid-card-strong w-full max-w-lg p-6 sm:p-8">
             <h2 className="mb-6 text-lg font-bold uppercase text-white">{t.companies.add}</h2>
 
             <div className="flex flex-col gap-4">

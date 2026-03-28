@@ -130,10 +130,12 @@ export interface Contract {
   id: string
   company_id: string
   document_id: string
-  extracted_terms: Record<string, unknown>
-  criticality_auto: number
-  criticality_manual: number | null
-  dependency_score: number
+  vendor_name?: string
+  criticality_auto?: number
+  criticality_manual?: number | null
+  financials?: Record<string, unknown>
+  sla?: Record<string, unknown>
+  terms?: Record<string, unknown>
   created_at: string
 }
 

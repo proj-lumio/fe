@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Send, Square, Trash2, MessageSquare, Loader2 } from "lucide-react"
+import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft } from "lucide-react"
 import { chatApi, companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
 import { LiquidInput } from "@/components/LiquidInput"
@@ -219,12 +219,14 @@ export default function Chat() {
 
   const sourcesMap = new Map<string, ChatSource[]>()
 
+  const mobileShowChat = selectedSessionId !== null
+
   return (
     <div className="flex h-[calc(100vh-120px)] md:h-[calc(100vh-120px)]" style={{ animation: "fadeInUp 500ms both" }}>
-      {/* Left Panel - Session List */}
+      {/* Left Panel - Session List (desktop: always, mobile: only when no session selected) */}
       <div
-        className="hidden sm:flex flex-col shrink-0"
-        style={{ width: 280, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+        className={`${mobileShowChat ? "hidden" : "flex"} sm:flex flex-col shrink-0 w-full sm:w-[280px]`}
+        style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}
       >
         {/* New Chat Button */}
         <div className="p-4">
@@ -326,20 +328,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Right Panel - Messages */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile: New chat button inline */}
-        <div className="sm:hidden p-3">
-          <button
-            onClick={() => setShowNewForm((v) => !v)}
-            className="w-full px-4 py-2.5 flex items-center justify-center gap-2 text-white text-sm font-medium active:scale-[0.98]"
-            style={{ borderRadius: 12, background: "#1f1f1f" }}
-          >
-            <Plus className="w-4 h-4" />
-            {t.chat.new_session}
-          </button>
-        </div>
-
+      {/* Right Panel - Messages (desktop: always, mobile: only when session selected) */}
+      <div className={`${mobileShowChat ? "flex" : "hidden"} sm:flex flex-1 flex-col min-w-0`}>
         {!selectedSessionId ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <MessageSquare className="w-12 h-12 text-[#a9a9a9]/30" />
@@ -347,6 +337,17 @@ export default function Chat() {
           </div>
         ) : (
           <>
+            {/* Mobile back button */}
+            <div className="sm:hidden p-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <button
+                onClick={() => setSelectedSessionId(null)}
+                className="flex items-center gap-1.5 text-sm text-[#a9a9a9] active:scale-[0.98] transition-transform duration-200"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {t.chat.title}
+              </button>
+            </div>
+
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {sessionDetailQuery.isLoading ? (

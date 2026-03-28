@@ -58,7 +58,13 @@ export default function CompanyDetail() {
 
   const { data: documentsData, isLoading: docsLoading } = useQuery({
     queryKey: ["documents", id],
-    queryFn: () => documentsApi.list(id!),
+    queryFn: async () => {
+      try {
+        return await documentsApi.list(id!)
+      } catch {
+        return { items: [] as Document[], total: 0 }
+      }
+    },
     enabled: !!id,
   })
 
@@ -185,21 +191,17 @@ export default function CompanyDetail() {
       className="pt-2 transition-all duration-500"
       style={{
         opacity: entered ? 1 : 0,
-        transform: entered ? "translateY(0) scale(1)" : "translateY(20px) scale(0.95)",
+        transform: entered ? "none" : "translateY(20px) scale(0.95)",
         filter: entered ? "none" : "blur(12px)",
       }}
     >
       {/* Breadcrumb */}
-      <nav className="mb-6 flex items-center gap-2 text-[13px]">
-        <Link to="/dashboard" className="text-[#a9a9a9] transition-colors hover:text-white">
-          {t.nav.dashboard}
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-[#a9a9a9]/50" />
-        <Link to="/companies" className="text-[#a9a9a9] transition-colors hover:text-white">
+      <nav className="mb-6 flex items-center gap-2 text-[13px] min-w-0 overflow-hidden">
+        <Link to="/companies" className="text-[#a9a9a9] transition-colors hover:text-white shrink-0">
           {t.nav.companies}
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-[#a9a9a9]/50" />
-        <span className="text-white font-medium">{company.name}</span>
+        <ChevronRight className="h-3.5 w-3.5 text-[#a9a9a9]/50 shrink-0" />
+        <span className="text-white font-medium truncate">{company.name}</span>
       </nav>
 
       {/* Header — title left, actions right on same line */}
@@ -235,8 +237,8 @@ export default function CompanyDetail() {
 
       {/* Delete Confirm */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
-          <div className="liquid-card-strong w-full max-w-sm p-8 text-center my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="liquid-card-strong w-full max-w-sm p-8 text-center">
             <p className="mb-6 text-sm text-white">{t.companies.delete_confirm}</p>
             <div className="flex justify-center gap-3">
               <button
@@ -267,8 +269,8 @@ export default function CompanyDetail() {
 
       {/* Edit Modal */}
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
-          <div className="liquid-card-strong w-full max-w-lg p-6 sm:p-8 my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="liquid-card-strong w-full max-w-lg p-6 sm:p-8">
             <h2 className="mb-6 text-lg font-bold uppercase text-white">{t.companies.edit}</h2>
 
             <div className="flex flex-col gap-4">
@@ -339,7 +341,7 @@ export default function CompanyDetail() {
       )}
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1">
+      <div className="mb-6 flex flex-wrap gap-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -363,10 +365,10 @@ export default function CompanyDetail() {
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="liquid-card flex items-center gap-3 p-5">
-            <Globe className="h-5 w-5 text-[#22cfff]" />
-            <div>
+            <Globe className="h-5 w-5 text-[#22cfff] shrink-0" />
+            <div className="min-w-0">
               <p className="text-xs text-[#a9a9a9]">{t.companies.website}</p>
-              <p className="text-sm text-white">{company.website || "-"}</p>
+              <p className="text-sm text-white truncate">{company.website || "-"}</p>
             </div>
           </div>
           <div className="liquid-card flex items-center gap-3 p-5">
@@ -383,7 +385,7 @@ export default function CompanyDetail() {
             <div>
               <p className="text-xs text-[#a9a9a9]">{t.companies.ranking_score}</p>
               <p className="text-sm font-medium text-white">
-                {company.ranking_score.toFixed(1)}
+                {(company.ranking_score ?? 0).toFixed(1)}
               </p>
             </div>
           </div>
@@ -454,56 +456,61 @@ export default function CompanyDetail() {
 
           {!docsLoading && documents.length > 0 && (
             <div className="flex flex-col gap-3">
-              {documents.map((doc, i) => (
-                <div
-                  key={doc.id}
-                  className="liquid-card flex items-center justify-between p-4"
-                  style={{
-                    opacity: entered ? 1 : 0,
-                    transform: entered ? "translateY(0)" : "translateY(12px)",
-                    transition: `opacity 400ms ease ${i * 100}ms, transform 400ms ease ${i * 100}ms`,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-[#22cfff]" />
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {doc.filename}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
-                          style={{
-                            background: "rgba(121, 102, 255, 0.2)",
-                            color: "#7966ff",
-                          }}
-                        >
-                          {doc.doc_type}
-                        </span>
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                          style={{
-                            background: `${STATUS_COLORS[doc.processing_status]}22`,
-                            color: STATUS_COLORS[doc.processing_status],
-                          }}
-                        >
-                          {doc.processing_status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => deleteDocMutation.mutate(doc.id)}
-                    disabled={deleteDocMutation.isPending}
-                    className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-[#ff4b44]/15 active:scale-[0.95]"
+              {documents.map((doc, i) => {
+                const statusColor = STATUS_COLORS[doc.processing_status] ?? "#a9a9a9"
+                return (
+                  <div
+                    key={doc.id}
+                    className="liquid-card flex items-center justify-between p-4"
                     style={{
-                      background: "rgba(255, 75, 68, 0.1)",
+                      opacity: entered ? 1 : 0,
+                      transform: entered ? "translateY(0)" : "translateY(12px)",
+                      transition: `opacity 400ms ease ${i * 100}ms, transform 400ms ease ${i * 100}ms`,
                     }}
                   >
-                    <Trash2 className="h-4 w-4 text-[#ff4b44]" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <FileText className="h-5 w-5 text-[#22cfff] shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {doc.filename}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          {doc.doc_type && (
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
+                              style={{
+                                background: "rgba(121, 102, 255, 0.2)",
+                                color: "#7966ff",
+                              }}
+                            >
+                              {doc.doc_type}
+                            </span>
+                          )}
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{
+                              background: `${statusColor}22`,
+                              color: statusColor,
+                            }}
+                          >
+                            {doc.processing_status ?? "unknown"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteDocMutation.mutate(doc.id)}
+                      disabled={deleteDocMutation.isPending}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#ff4b44]/15 active:scale-[0.95]"
+                      style={{
+                        background: "rgba(255, 75, 68, 0.1)",
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-[#ff4b44]" />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -527,55 +534,58 @@ export default function CompanyDetail() {
 
           {!contractsLoading && contracts.length > 0 && (
             <div className="flex flex-col gap-3">
-              {contracts.map((contract, i) => (
-                <div
-                  key={contract.id}
-                  className="liquid-card flex items-center justify-between p-5"
-                  style={{
-                    opacity: entered ? 1 : 0,
-                    transform: entered ? "translateY(0)" : "translateY(12px)",
-                    transition: `opacity 400ms ease ${i * 100}ms, transform 400ms ease ${i * 100}ms`,
-                  }}
-                >
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      {contract.id.slice(0, 8)}...
-                    </p>
-                    <div className="mt-1 flex items-center gap-3">
-                      <span className="text-xs text-[#a9a9a9]">
-                        {t.companies.criticality}
-                      </span>
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                        style={{
-                          background:
-                            contract.criticality_auto > 7
-                              ? "rgba(255, 75, 68, 0.2)"
-                              : contract.criticality_auto > 4
-                                ? "rgba(234, 179, 8, 0.2)"
-                                : "rgba(34, 197, 94, 0.2)",
-                          color:
-                            contract.criticality_auto > 7
-                              ? "#ff4b44"
-                              : contract.criticality_auto > 4
-                                ? "#eab308"
-                                : "#22c55e",
-                        }}
-                      >
-                        {contract.criticality_manual ?? contract.criticality_auto}
-                      </span>
+              {contracts.map((contract, i) => {
+                const crit = contract.criticality_manual ?? contract.criticality_auto ?? 0
+                return (
+                  <div
+                    key={contract.id}
+                    className="liquid-card flex items-center justify-between p-5"
+                    style={{
+                      opacity: entered ? 1 : 0,
+                      transform: entered ? "translateY(0)" : "translateY(12px)",
+                      transition: `opacity 400ms ease ${i * 100}ms, transform 400ms ease ${i * 100}ms`,
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {contract.vendor_name || contract.id.slice(0, 8) + "..."}
+                      </p>
+                      <div className="mt-1 flex items-center gap-3">
+                        <span className="text-xs text-[#a9a9a9]">
+                          {t.companies.criticality}
+                        </span>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{
+                            background:
+                              crit > 4
+                                ? "rgba(255, 75, 68, 0.2)"
+                                : crit > 2
+                                  ? "rgba(234, 179, 8, 0.2)"
+                                  : "rgba(34, 197, 94, 0.2)",
+                            color:
+                              crit > 4
+                                ? "#ff4b44"
+                                : crit > 2
+                                  ? "#eab308"
+                                  : "#22c55e",
+                          }}
+                        >
+                          {crit}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-xs text-[#a9a9a9]">
+                        {t.companies.created}
+                      </p>
+                      <p className="text-sm font-medium text-[#22cfff]">
+                        {new Date(contract.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-[#a9a9a9]">
-                      {t.companies.dependency_score}
-                    </p>
-                    <p className="text-sm font-medium text-[#22cfff]">
-                      {contract.dependency_score.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
