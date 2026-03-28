@@ -23,7 +23,6 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { companiesApi } from "@/lib/api"

@@ -7,7 +7,6 @@ import {
   BarChart3,
   Video,
   Settings,
-  Sparkles,
   Plus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -26,8 +25,8 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-16 flex-col items-center border-r border-sidebar-border bg-sidebar-background py-4">
       {/* Logo */}
-      <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent">
-        <Sparkles className="h-5 w-5 text-sidebar-primary" />
+      <div className="mb-6">
+        <img src="/lumio_ic.png" alt="Lumio" className="h-10 w-10" />
       </div>
 
       {/* Navigation */}

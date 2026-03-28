@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuthStore } from "@/store/auth"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { signOut } from "@/lib/firebase"
 
 const routeLabels: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -77,7 +76,10 @@ export function TopBar() {
           size="icon"
           title="Logout"
           className="rounded-full"
-          onClick={() => signOut()}
+          onClick={() => {
+            useAuthStore.getState().setUser(null)
+            window.location.href = "/login"
+          }}
         >
           <LogOut className="h-4 w-4" />
         </Button>

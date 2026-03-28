@@ -81,11 +81,12 @@ export default function CompanyDetail() {
   })
 
   const uploadMutation = useMutation({
-    mutationFn: (files: File[]) => {
+    mutationFn: async (files: File[]) => {
       if (files.length === 1) {
         return documentsApi.upload(id!, files[0])
       }
-      return documentsApi.uploadMultiple(id!, files)
+      const results = await documentsApi.uploadMultiple(id!, files)
+      return results[0]
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents", id] })
@@ -396,7 +397,7 @@ export default function CompanyDetail() {
               ) : (
                 <div className="space-y-2">
                   {documents.map((doc) => {
-                    const status = statusConfig[doc.processing_status] ?? statusConfig.pending
+                    const status = statusConfig[doc.processing_status as keyof typeof statusConfig] ?? statusConfig.pending
                     const StatusIcon = status.icon
                     return (
                       <div

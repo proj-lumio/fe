@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,12 +23,11 @@ import {
   Loader2,
   ChevronRight,
 } from "lucide-react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { circlebackApi, companiesApi } from "@/lib/api"
 import type { Meeting } from "@/types"
 
 export default function Meetings() {
-  const queryClient = useQueryClient()
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null)
   const [ingestDialogOpen, setIngestDialogOpen] = useState(false)
   const [ingestMeetingId, setIngestMeetingId] = useState<string | null>(null)
@@ -141,7 +140,7 @@ export default function Meetings() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {meeting.participants.map((p, i) => (
+                {meeting.participants.map((p: string, i: number) => (
                   <Badge key={i} variant="secondary" className="rounded-full">
                     {p}
                   </Badge>
