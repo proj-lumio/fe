@@ -1,20 +1,20 @@
 import { lazy, Suspense } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { CustomCursor } from "@/components/CustomCursor"
-import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { AppLayout } from "@/components/layout/AppLayout"
+import { CustomCursor } from "@/components/custom_cursor"
+import { ProtectedRoute } from "@/components/protected_route"
+import { AppLayout } from "@/components/layout/app_layout"
 import { useAuthStore } from "@/store/auth"
 import { Loader2 } from "lucide-react"
-import Landing from "@/pages/Landing"
-import Login from "@/pages/Login"
+import Landing from "@/pages/landing"
+import Login from "@/pages/login"
 
-const Dashboard = lazy(() => import("@/pages/Dashboard"))
-const Companies = lazy(() => import("@/pages/Companies"))
-const CompanyDetail = lazy(() => import("@/pages/CompanyDetail"))
-const Chat = lazy(() => import("@/pages/Chat"))
-const Ranking = lazy(() => import("@/pages/Ranking"))
-const Analytics = lazy(() => import("@/pages/Analytics"))
-const Settings = lazy(() => import("@/pages/Settings"))
+const Dashboard = lazy(() => import("@/pages/dashboard"))
+const Companies = lazy(() => import("@/pages/companies"))
+const CompanyDetail = lazy(() => import("@/pages/company_detail"))
+const Chat = lazy(() => import("@/pages/chat"))
+const Ranking = lazy(() => import("@/pages/ranking"))
+const Analytics = lazy(() => import("@/pages/analytics"))
+const Settings = lazy(() => import("@/pages/settings"))
 
 function PageLoader() {
   return (

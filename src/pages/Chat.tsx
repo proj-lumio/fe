@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft } from "lucide-react"
 import { chatApi, companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
-import { LiquidInput } from "@/components/LiquidInput"
+import { LiquidInput } from "@ui"
 import type { ChatMessage, ChatSource } from "@/types"
 
 function Skeleton({ className = "" }: { className?: string }) {

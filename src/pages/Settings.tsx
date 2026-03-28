@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Globe, Bell } from "lucide-react"
 import { settingsApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
-import { LanguageSwitch } from "@/components/LanguageSwitch"
+import { LanguageSwitch } from "@/components/language_switch"
 import type { SettingsUpdate } from "@/types"
 
 function Skeleton({ className = "" }: { className?: string }) {

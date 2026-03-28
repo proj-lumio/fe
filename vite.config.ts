@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      "@ui": path.resolve(__dirname, "./ui_components"),
       "@": path.resolve(__dirname, "./src"),
     },
   },

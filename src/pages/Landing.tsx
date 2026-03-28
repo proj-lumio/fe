@@ -1,9 +1,9 @@
 import { ArrowRight } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { LanguageSwitch } from "@/components/LanguageSwitch"
-import { LiquidInput } from "@/components/LiquidInput"
-import { OpenSourceBanner } from "@/components/OpenSourceBanner"
+import { LanguageSwitch } from "@/components/language_switch"
+import { LiquidInput } from "@ui"
+import { OpenSourceBanner } from "@/components/open_source_banner"
 import { useTranslations } from "@/hooks/useTranslations"
 import { validateEmail } from "@/lib/validators"
 

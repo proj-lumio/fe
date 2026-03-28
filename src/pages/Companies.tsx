@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
-import { LiquidInput } from "@/components/LiquidInput"
+import { LiquidInput } from "@ui"
 import { Loader2, Plus, Search } from "lucide-react"
 import type { CompanyCreate, Company } from "@/types"
 
