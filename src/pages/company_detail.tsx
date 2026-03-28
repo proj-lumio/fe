@@ -13,6 +13,15 @@ import {
   Loader2,
   Pencil,
   ChevronRight,
+  Sparkles,
+  MapPin,
+  Phone,
+  Mail,
+  ExternalLink,
+  Hash,
+  Users,
+  BadgeEuro,
+  RefreshCw,
 } from "lucide-react"
 import type { CompanyUpdate, Document, Contract } from "@/types"
 
@@ -112,6 +121,13 @@ export default function CompanyDetail() {
     mutationFn: (docId: string) => documentsApi.delete(id!, docId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents", id] })
+    },
+  })
+
+  const enrichMutation = useMutation({
+    mutationFn: () => companiesApi.enrich(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company", id] })
     },
   })
 
@@ -363,45 +379,214 @@ export default function CompanyDetail() {
 
       {/* Tab Content */}
       {activeTab === "overview" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="liquid-card flex items-center gap-3 p-5">
-            <Globe className="h-5 w-5 text-[#22cfff] shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs text-[#a9a9a9]">{t.companies.website}</p>
-              <p className="text-sm text-white truncate">{company.website || "-"}</p>
+        <div className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="liquid-card flex items-center gap-3 p-5">
+              <Globe className="h-5 w-5 text-[#22cfff] shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-[#a9a9a9]">{t.companies.website}</p>
+                <p className="text-sm text-white truncate">{company.website || "-"}</p>
+              </div>
             </div>
+            <div className="liquid-card flex items-center gap-3 p-5">
+              <Building2 className="h-5 w-5 text-[#22cfff]" />
+              <div>
+                <p className="text-xs text-[#a9a9a9]">{t.companies.industry}</p>
+                <p className="text-sm text-white">{company.industry || "-"}</p>
+              </div>
+            </div>
+            <div className="liquid-card flex items-center gap-3 p-5">
+              <div className="flex h-5 w-5 items-center justify-center text-sm font-bold text-[#7966ff]">
+                #
+              </div>
+              <div>
+                <p className="text-xs text-[#a9a9a9]">{t.companies.ranking_score}</p>
+                <p className="text-sm font-medium text-white">
+                  {(company.ranking_score ?? 0).toFixed(1)}
+                </p>
+              </div>
+            </div>
+            <div className="liquid-card flex items-center gap-3 p-5">
+              <FileText className="h-5 w-5 text-[#22cfff]" />
+              <div>
+                <p className="text-xs text-[#a9a9a9]">{t.companies.created}</p>
+                <p className="text-sm text-white">
+                  {new Date(company.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {company.description && (
+              <div className="liquid-card col-span-full p-5">
+                <p className="text-xs text-[#a9a9a9] mb-1">{t.companies.description}</p>
+                <p className="text-sm text-white">{company.description}</p>
+              </div>
+            )}
           </div>
-          <div className="liquid-card flex items-center gap-3 p-5">
-            <Building2 className="h-5 w-5 text-[#22cfff]" />
+
+          {/* P.IVA & Enrich Button */}
+          {company.piva && (
+            <div className="liquid-card flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <Hash className="h-5 w-5 text-[#7966ff]" />
+                <div>
+                  <p className="text-xs text-[#a9a9a9]">{t.companies.piva}</p>
+                  <p className="text-sm font-medium text-white">{company.piva}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => enrichMutation.mutate()}
+                disabled={enrichMutation.isPending}
+                className="liquid-card-btn flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.98] disabled:opacity-50"
+                style={{ borderRadius: 12 }}
+              >
+                {enrichMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                {enrichMutation.isPending ? t.companies.enriching : t.companies.enrich}
+              </button>
+            </div>
+          )}
+
+          {/* Registry Data (from OpenAPI IT enrichment) */}
+          {company.openapi_enriched_at && (
             <div>
-              <p className="text-xs text-[#a9a9a9]">{t.companies.industry}</p>
-              <p className="text-sm text-white">{company.industry || "-"}</p>
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-white">
+                <Sparkles className="h-4 w-4 text-[#7966ff]" />
+                {t.companies.registry_data}
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {company.ragione_sociale && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.ragione_sociale}</p>
+                    <p className="mt-1 text-sm text-white">{company.ragione_sociale}</p>
+                  </div>
+                )}
+                {company.forma_giuridica && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.forma_giuridica}</p>
+                    <p className="mt-1 text-sm text-white">{company.forma_giuridica}</p>
+                  </div>
+                )}
+                {company.stato_attivita && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.stato_attivita}</p>
+                    <p className="mt-1 text-sm text-white">{company.stato_attivita}</p>
+                  </div>
+                )}
+                {(company.indirizzo || company.citta) && (
+                  <div className="liquid-card flex items-start gap-3 p-4">
+                    <MapPin className="h-4 w-4 mt-0.5 text-[#22cfff] shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.indirizzo}</p>
+                      <p className="mt-1 text-sm text-white">
+                        {[company.indirizzo, company.cap, company.citta, company.provincia].filter(Boolean).join(", ")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {company.ateco && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.ateco}</p>
+                    <p className="mt-1 text-sm text-white">{company.ateco}</p>
+                    {company.ateco_description && (
+                      <p className="mt-0.5 text-xs text-[#a9a9a9]">{company.ateco_description}</p>
+                    )}
+                  </div>
+                )}
+                {company.pec && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.pec}</p>
+                    <p className="mt-1 text-sm text-white break-all">{company.pec}</p>
+                  </div>
+                )}
+                {company.sdi && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.sdi}</p>
+                    <p className="mt-1 text-sm text-white">{company.sdi}</p>
+                  </div>
+                )}
+                {company.dipendenti != null && (
+                  <div className="liquid-card flex items-start gap-3 p-4">
+                    <Users className="h-4 w-4 mt-0.5 text-[#22cfff] shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.dipendenti}</p>
+                      <p className="mt-1 text-sm text-white">{company.dipendenti.toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                {company.fatturato != null && (
+                  <div className="liquid-card flex items-start gap-3 p-4">
+                    <BadgeEuro className="h-4 w-4 mt-0.5 text-[#22cfff] shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.fatturato}</p>
+                      <p className="mt-1 text-sm text-white">{company.fatturato.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })}</p>
+                    </div>
+                  </div>
+                )}
+                {company.capitale_sociale != null && (
+                  <div className="liquid-card p-4">
+                    <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.capitale_sociale}</p>
+                    <p className="mt-1 text-sm text-white">{company.capitale_sociale.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="liquid-card flex items-center gap-3 p-5">
-            <div className="flex h-5 w-5 items-center justify-center text-sm font-bold text-[#7966ff]">
-              #
-            </div>
+          )}
+
+          {/* Contacts (from web enrichment) */}
+          {(company.email_aziendale || company.telefono_aziendale || company.linkedin_url) && (
             <div>
-              <p className="text-xs text-[#a9a9a9]">{t.companies.ranking_score}</p>
-              <p className="text-sm font-medium text-white">
-                {(company.ranking_score ?? 0).toFixed(1)}
-              </p>
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-white">
+                <Mail className="h-4 w-4 text-[#22cfff]" />
+                {t.companies.contacts}
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {company.email_aziendale && (
+                  <div className="liquid-card flex items-center gap-3 p-4">
+                    <Mail className="h-4 w-4 text-[#22cfff] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.email_aziendale}</p>
+                      <p className="mt-1 text-sm text-white break-all">{company.email_aziendale}</p>
+                    </div>
+                  </div>
+                )}
+                {company.telefono_aziendale && (
+                  <div className="liquid-card flex items-center gap-3 p-4">
+                    <Phone className="h-4 w-4 text-[#22cfff] shrink-0" />
+                    <div>
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">{t.companies.telefono}</p>
+                      <p className="mt-1 text-sm text-white">{company.telefono_aziendale}</p>
+                    </div>
+                  </div>
+                )}
+                {company.linkedin_url && (
+                  <div className="liquid-card flex items-center gap-3 p-4">
+                    <ExternalLink className="h-4 w-4 text-[#22cfff] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-[#a9a9a9]">LinkedIn</p>
+                      <a href={company.linkedin_url} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm text-[#7966ff] truncate hover:underline">
+                        {company.linkedin_url.replace(/^https?:\/\/(www\.)?/, "")}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="liquid-card flex items-center gap-3 p-5">
-            <FileText className="h-5 w-5 text-[#22cfff]" />
+          )}
+
+          {/* AI Description */}
+          {company.descrizione && (
             <div>
-              <p className="text-xs text-[#a9a9a9]">{t.companies.created}</p>
-              <p className="text-sm text-white">
-                {new Date(company.created_at).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-          {company.description && (
-            <div className="liquid-card col-span-full p-5">
-              <p className="text-xs text-[#a9a9a9] mb-1">{t.companies.description}</p>
-              <p className="text-sm text-white">{company.description}</p>
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-white">
+                <Sparkles className="h-4 w-4 text-[#7966ff]" />
+                {t.companies.descrizione_ai}
+              </h3>
+              <div className="liquid-card p-5">
+                <p className="text-sm leading-relaxed text-white/90">{company.descrizione}</p>
+              </div>
             </div>
           )}
         </div>

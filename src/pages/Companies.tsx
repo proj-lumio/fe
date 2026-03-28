@@ -21,6 +21,7 @@ export default function Companies() {
   const [formDescription, setFormDescription] = useState("")
   const [formIndustry, setFormIndustry] = useState("")
   const [formWebsite, setFormWebsite] = useState("")
+  const [formPiva, setFormPiva] = useState("")
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -62,6 +63,7 @@ export default function Companies() {
     setFormDescription("")
     setFormIndustry("")
     setFormWebsite("")
+    setFormPiva("")
   }
 
   function handleCreate() {
@@ -71,6 +73,7 @@ export default function Companies() {
       description: formDescription.trim() || undefined,
       industry: formIndustry.trim() || undefined,
       website: formWebsite.trim() || undefined,
+      piva: formPiva.trim() || undefined,
     })
   }
 
@@ -119,6 +122,11 @@ export default function Companies() {
               <div>
                 <label className="mb-1.5 block text-xs text-[#a9a9a9]">{t.companies.name}</label>
                 <LiquidInput value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t.companies.name} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-[#a9a9a9]">{t.companies.piva}</label>
+                <LiquidInput value={formPiva} onChange={(e) => setFormPiva(e.target.value)} placeholder={t.companies.piva_placeholder} />
+                <p className="mt-1 text-[10px] text-[#a9a9a9]/70">{t.companies.piva_hint}</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs text-[#a9a9a9]">{t.companies.description}</label>

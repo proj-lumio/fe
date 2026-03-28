@@ -114,6 +114,51 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
   }
 
+  const handleSseFallback = useCallback(async (sessionId: string, content: string) => {
+    const token = localStorage.getItem("lumio-token") ?? ""
+    let accumulated = ""
+    try {
+      const res = await fetch(`/api/v1/chat/sessions/${sessionId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content }),
+      })
+      if (!res.ok || !res.body) throw new Error("SSE request failed")
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === "chunk") {
+              accumulated += data.data
+              setStreamingContent(accumulated)
+            } else if (data.type === "sources") {
+              setStreamingSources(data.data)
+            } else if (data.type === "done") {
+              // done
+            } else if (data.type === "error") {
+              break
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } finally {
+      setIsStreaming(false)
+      setStreamingContent("")
+      setOptimisticMessages([])
+      setStreamingSources([])
+      queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId] })
+    }
+  }, [queryClient])
+
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedSessionId || isStreaming) return
 
@@ -175,32 +220,24 @@ export default function Chat() {
       ws.onerror = async () => {
         ws.close()
         wsRef.current = null
+        // SSE fallback — BE returns text/event-stream, not JSON
         try {
-          await chatApi.sendMessage(selectedSessionId, content)
-          queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
+          await handleSseFallback(selectedSessionId, content)
         } catch {
           // ignore
         }
-        setIsStreaming(false)
-        setStreamingContent("")
-        setOptimisticMessages([])
-        setStreamingSources([])
       }
 
       ws.onclose = () => {
         wsRef.current = null
       }
     } catch {
+      // SSE fallback
       try {
-        await chatApi.sendMessage(selectedSessionId, content)
-        queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
+        await handleSseFallback(selectedSessionId, content)
       } catch {
         // ignore
       }
-      setIsStreaming(false)
-      setStreamingContent("")
-      setOptimisticMessages([])
-      setStreamingSources([])
     }
   }, [newMessage, selectedSessionId, isStreaming, queryClient])
 

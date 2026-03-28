@@ -73,6 +73,9 @@ export const companiesApi = {
 
   delete: (id: string) =>
     api.delete(`/companies/${id}`),
+
+  enrich: (id: string, vat_number?: string) =>
+    api.post<Company>(`/companies/${id}/enrich`, vat_number ? { vat_number } : undefined).then((r) => r.data),
 }
 
 // ── Documents ────────────────────────────────────────
@@ -132,7 +135,7 @@ export const contractsApi = {
     api.get<{ items: Contract[]; total: number }>(`/companies/${companyId}/contracts`).then((r) => r.data),
 
   getDependency: (companyId: string) =>
-    api.get<DependencyBreakdown>(`/companies/${companyId}/contracts/dependency`).then((r) => r.data),
+    api.get<DependencyBreakdown>(`/companies/${companyId}/contracts/client-score`).then((r) => r.data),
 
   updateCriticality: (companyId: string, contractId: string, criticality: number) =>
     api.patch<Contract>(`/companies/${companyId}/contracts/${contractId}/criticality`, { criticality }).then((r) => r.data),

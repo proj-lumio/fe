@@ -25,8 +25,44 @@ export interface Company {
   website: string | null
   logo_url: string | null
   ranking_score: number
+  client_score: number
+  total_annual_revenue_eur: number
   created_at: string
   updated_at: string
+  // OpenAPI IT enrichment fields
+  piva: string | null
+  ragione_sociale: string | null
+  forma_giuridica: string | null
+  data_costituzione: string | null
+  indirizzo: string | null
+  cap: string | null
+  citta: string | null
+  provincia: string | null
+  regione: string | null
+  ateco: string | null
+  ateco_description: string | null
+  dipendenti: number | null
+  fatturato: number | null
+  capitale_sociale: number | null
+  pec: string | null
+  sdi: string | null
+  stato_attivita: string | null
+  rea_code: string | null
+  cciaa: string | null
+  openapi_enriched_at: string | null
+  // Web enrichment fields
+  email_aziendale: string | null
+  telefono_aziendale: string | null
+  linkedin_url: string | null
+  facebook_url: string | null
+  instagram_url: string | null
+  twitter_url: string | null
+  descrizione: string | null
+  marchi_registrati: Record<string, unknown>[] | null
+  news_recenti: Record<string, unknown>[] | null
+  punti_chiave: string[] | null
+  settore_label: string | null
+  enriched_at: string | null
 }
 
 export interface CompanyCreate {
@@ -35,6 +71,7 @@ export interface CompanyCreate {
   industry?: string
   website?: string
   logo_url?: string
+  piva?: string
 }
 
 export interface CompanyUpdate {
