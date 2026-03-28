@@ -92,6 +92,10 @@ export function Sidebar() {
       </div>
 
       {/* Mobile bottom bar */}
+      <div
+        className="pointer-events-none fixed bottom-[56px] left-0 right-0 z-39 h-8 md:hidden"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }}
+      />
       <div className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-white/[0.06] bg-[#0c0c0c]/90 backdrop-blur-lg px-2 py-2">
         {NAV_ITEMS.map(({ key, path, icon: Icon }) => (
           <NavLink key={key} to={path} className="transition-all active:scale-[0.9]">

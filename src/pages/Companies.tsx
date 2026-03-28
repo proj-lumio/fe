@@ -82,7 +82,7 @@ export default function Companies() {
       style={{
         opacity: entered ? 1 : 0,
         transform: entered ? "translateY(0) scale(1)" : "translateY(20px) scale(0.95)",
-        filter: entered ? "blur(0px)" : "blur(12px)",
+        filter: entered ? "none" : "blur(12px)",
       }}
     >
       {/* Header — title left, action right */}
