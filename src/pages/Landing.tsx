@@ -71,7 +71,7 @@ export default function Landing() {
           <img
             src="/lumio_banner.png"
             alt="Lumio"
-            className="h-16 w-auto sm:h-22 lg:h-28"
+            className="h-20 w-auto sm:h-28 lg:h-36"
           />
           <LanguageSwitch />
         </div>

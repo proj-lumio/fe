@@ -137,9 +137,9 @@ export default function Login() {
           fill="none"
           strokeLinecap="round"
         />
-        {/* Small diagonal — bottom right near the arc */}
+        {/* Small diagonal — starts bottom right, curls toward right edge */}
         <path
-          d="M1100 680 C1130 720, 1160 750, 1200 800"
+          d="M1100 680 C1140 710, 1180 730, 1250 740 S1360 760, 1440 790"
           stroke="url(#wave-diag)"
           strokeWidth="2"
           fill="none"
@@ -157,7 +157,7 @@ export default function Login() {
           }}
         />
         <div className="relative flex h-20 items-center justify-between px-6 sm:h-24 sm:px-8 lg:px-10">
-          <img src="/lumio_banner.png" alt="Lumio" className="h-16 w-auto sm:h-22 lg:h-28" />
+          <img src="/lumio_banner.png" alt="Lumio" className="h-20 w-auto sm:h-28 lg:h-36" />
           <LanguageSwitch />
         </div>
       </header>
@@ -169,9 +169,8 @@ export default function Login() {
             entered ? "translate-y-0 scale-100 opacity-100" : "translate-y-8 scale-95 opacity-0"
           }`}
         >
-          {/* Logo */}
-          <div className="mb-6 flex flex-col items-center gap-3">
-            <img src="/lumio_ic.png" alt="Lumio" className="h-14 w-14" />
+          {/* Subtitle above form */}
+          <div className="mb-6 text-center">
             <p className="text-base font-medium text-white sm:text-lg">
               {isLogin ? t.login.subtitle : t.login.register_subtitle}
             </p>
@@ -209,6 +208,7 @@ export default function Login() {
                   {t.login.password}
                 </label>
                 <LiquidInput
+                  key="pw"
                   id="password"
                   type="password"
                   placeholder={t.login.password_placeholder}
@@ -231,6 +231,7 @@ export default function Login() {
                     {t.login.confirm_password}
                   </label>
                   <LiquidInput
+                    key="confirm-pw"
                     id="confirm"
                     type="password"
                     placeholder={t.login.confirm_password_placeholder}

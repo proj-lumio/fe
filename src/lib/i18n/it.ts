@@ -2,7 +2,7 @@ export const it = {
   landing: {
     title_1: "Decisioni migliori.",
     title_2: "Dati reali.",
-    subtitle: "Document intelligence basata su AI. Analizza aziende, chatta con i tuoi dati e prendi decisioni basate su documenti reali.",
+    subtitle: "Data first, AI powered. Analizza aziende, chatta con i tuoi dati e prendi decisioni su documenti reali.",
     email_placeholder: "La tua email",
     cta: "Inizia Ora",
     open_source_title: "Open Source",

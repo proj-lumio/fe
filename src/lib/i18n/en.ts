@@ -2,7 +2,7 @@ export const en = {
   landing: {
     title_1: "Better decisions.",
     title_2: "Real data.",
-    subtitle: "AI-powered document intelligence. Analyze companies, chat with your data, and make decisions grounded in real documents.",
+    subtitle: "Data first, AI powered. Analyze companies, chat with your data, and make decisions grounded in real documents.",
     email_placeholder: "Your email",
     cta: "Get Started",
     open_source_title: "Open Source",
