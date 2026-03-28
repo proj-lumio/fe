@@ -1,7 +1,7 @@
 export const en = {
   landing: {
-    title_1: "Know your business.",
-    title_2: "Before it changes.",
+    title_1: "Better decisions.",
+    title_2: "Real data.",
     subtitle: "AI-powered document intelligence. Analyze companies, chat with your data, and make decisions grounded in real documents.",
     email_placeholder: "Your email",
     cta: "Get Started",

@@ -106,6 +106,47 @@ export default function Login() {
         }}
       />
 
+      {/* Vertical wavy stripe — left of center */}
+      <svg
+        className="pointer-events-none fixed inset-0 z-[2] h-full w-full"
+        viewBox="0 0 1440 900"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="wave-v" x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stopColor="#7966ff" stopOpacity="0" />
+            <stop offset="20%" stopColor="#7966ff" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#9d8fff" stopOpacity="0.6" />
+            <stop offset="80%" stopColor="#7966ff" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#7966ff" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="wave-diag" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#9d8fff" stopOpacity="0" />
+            <stop offset="30%" stopColor="#9d8fff" stopOpacity="0.5" />
+            <stop offset="70%" stopColor="#7966ff" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#7966ff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Vertical line — left */}
+        <path
+          d="M520 0 C480 160, 400 300, 450 440 S560 580, 500 720"
+          stroke="url(#wave-v)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {/* Small diagonal — bottom right near the arc */}
+        <path
+          d="M1100 680 C1130 720, 1160 750, 1200 800"
+          stroke="url(#wave-diag)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+      </svg>
+
       {/* Header */}
       <header className="fixed top-0 z-50 w-full">
         <div
@@ -129,9 +170,9 @@ export default function Login() {
           }`}
         >
           {/* Logo */}
-          <div className="mb-6 flex flex-col items-center gap-2">
+          <div className="mb-6 flex flex-col items-center gap-3">
             <img src="/lumio_ic.png" alt="Lumio" className="h-14 w-14" />
-            <p className="text-xs text-[#a9a9a9]">
+            <p className="text-base font-medium text-white sm:text-lg">
               {isLogin ? t.login.subtitle : t.login.register_subtitle}
             </p>
           </div>

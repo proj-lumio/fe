@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { LanguageSwitch } from "@/components/LanguageSwitch"
 import { LiquidInput } from "@/components/LiquidInput"
@@ -11,8 +11,13 @@ export default function Landing() {
   const navigate = useNavigate()
   const t = useTranslations()
   const [transitioning, setTransitioning] = useState(false)
+  const [entered, setEntered] = useState(false)
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
+
+  useEffect(() => {
+    requestAnimationFrame(() => setEntered(true))
+  }, [])
 
   function goToLogin() {
     setTransitioning(true)
@@ -75,7 +80,11 @@ export default function Landing() {
       {/* Hero */}
       <section className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pt-24 sm:px-6 sm:pt-0">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-3xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+          <h1
+            className={`text-3xl font-semibold leading-[1.1] tracking-tight transition-all duration-700 ease-out sm:text-5xl lg:text-6xl ${
+              entered ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
+          >
             {t.landing.title_1}
             <br />
             <span className="bg-gradient-to-r from-[#7966ff] to-[#9d8fff] bg-clip-text text-transparent">
@@ -83,14 +92,20 @@ export default function Landing() {
             </span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-xl text-xs leading-relaxed text-[#a9a9a9] sm:mt-6 sm:text-sm lg:text-base">
+          <p
+            className={`mx-auto mt-5 max-w-xl text-xs leading-relaxed text-[#a9a9a9] transition-all duration-700 ease-out delay-150 sm:mt-6 sm:text-sm lg:text-base ${
+              entered ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
+          >
             {t.landing.subtitle}
           </p>
 
           {/* Email field (liquid) + CTA */}
           <form
             onSubmit={handleSubmit}
-            className="mx-auto mt-8 flex max-w-md flex-col items-stretch gap-3 sm:mt-10 sm:flex-row"
+            className={`mx-auto mt-8 flex max-w-md flex-col items-stretch gap-3 transition-all duration-700 ease-out delay-300 sm:mt-10 sm:flex-row ${
+              entered ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
           >
             <div className="w-full sm:flex-1 sm:min-w-0">
               <LiquidInput

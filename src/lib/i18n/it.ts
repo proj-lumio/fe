@@ -1,12 +1,12 @@
 export const it = {
   landing: {
-    title_1: "Il tuo business.",
-    title_2: "Prima che cambi.",
+    title_1: "Decisioni migliori.",
+    title_2: "Dati reali.",
     subtitle: "Document intelligence basata su AI. Analizza aziende, chatta con i tuoi dati e prendi decisioni basate su documenti reali.",
     email_placeholder: "La tua email",
     cta: "Inizia Ora",
     open_source_title: "Open Source",
-    open_source_body: "Lumio e completamente open source. Esplora il codice, contribuisci e costruisci su di esso.",
+    open_source_body: "Lumio è completamente open source. Esplora il codice, contribuisci e costruisci su di esso.",
     learn_more: "Scopri di piu",
     email_invalid: "Inserisci un indirizzo email valido",
     privacy: "Privacy",
