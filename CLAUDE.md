@@ -68,7 +68,7 @@ CSS classes:
 
 ### Assets
 
-- Images: `name_img.extension` (e.g., `bg_img.webp`)
+- Images: `name_img.extension` (e.g., `bg_img.jpeg`)
 - Icons: `name_ic.extension` (e.g., `lumio_ic.png`, `lumio_ic.ico`)
 - Banners: `name_banner.extension` (e.g., `lumio_banner.png`)
 - Fonts: `name_font.extension`
@@ -127,7 +127,7 @@ All assets go in `public/`.
 
 ## Visual Patterns
 
-- Background: blurred image (`bg_img.webp`) + `bg-black/55` + `backdrop-blur-md`
+- Background: blurred image (`bg_img.jpeg`) + `bg-black/55` + `backdrop-blur-md`
 - Side fades: wide black gradient from both sides (0.95 → transparent → 0.95)
 - Header: top fade gradient (black 0.8 → transparent)
 - SVG arcs: gradient stroke with faded ends, fill below follows the curve shape

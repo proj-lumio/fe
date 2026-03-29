@@ -8,7 +8,7 @@ export function AppLayout() {
       {/* Blurred background image */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url(/bg_img.webp)" }}
+        style={{ backgroundImage: "url(/bg_img.jpeg)" }}
       >
         <div className="absolute inset-0 bg-black/65 backdrop-blur-xl" />
       </div>
