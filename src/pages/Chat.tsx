@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, memo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft } from "lucide-react"
+import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft, FileText, Share2 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { chatApi, companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
 import { LiquidInput } from "@ui"
-import type { ChatMessage, ChatSource } from "@/types"
+import type { ChatMessage, ChatSources } from "@/types"
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-2xl bg-white/[0.06] ${className}`} />
@@ -22,6 +24,38 @@ function MessageSkeleton({ align }: { align: "left" | "right" }) {
   )
 }
 
+const MarkdownContent = memo(function MarkdownContent({ content }: { content: string }) {
+  return (
+    <div className="markdown-content text-sm text-white">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  )
+})
+
+function SourcesBadge({ sources }: { sources: ChatSources }) {
+  const t = useTranslations()
+  const vectorCount = sources.vector_results?.length ?? 0
+  const graphCount = sources.graph_entities?.length ?? 0
+  if (vectorCount === 0 && graphCount === 0) return null
+
+  return (
+    <div className="mt-3 pt-2 border-t border-white/[0.06] flex flex-wrap gap-2">
+      {vectorCount > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#a9a9a9] bg-white/[0.04] px-2.5 py-1 rounded-lg">
+          <FileText className="w-3 h-3 text-[#7966ff]" />
+          {vectorCount} {t.chat.vector_results}
+        </span>
+      )}
+      {graphCount > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#a9a9a9] bg-white/[0.04] px-2.5 py-1 rounded-lg">
+          <Share2 className="w-3 h-3 text-[#22cfff]" />
+          {graphCount} {t.chat.graph_entities}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function Chat() {
   const t = useTranslations()
   const queryClient = useQueryClient()
@@ -34,7 +68,7 @@ export default function Chat() {
   const [newTitle, setNewTitle] = useState("")
   const [newCompanyId, setNewCompanyId] = useState("")
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([])
-  const [streamingSources, setStreamingSources] = useState<ChatSource[]>([])
+  const [streamingSources, setStreamingSources] = useState<ChatSources | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -97,7 +131,6 @@ export default function Chat() {
       wsRef.current = null
     }
     setIsStreaming(false)
-    // Keep whatever we accumulated so far as a visible message
     if (streamingContent) {
       const partialMsg: ChatMessage = {
         id: `partial-${Date.now()}`,
@@ -110,7 +143,7 @@ export default function Chat() {
       setOptimisticMessages((prev) => [...prev, partialMsg])
     }
     setStreamingContent("")
-    setStreamingSources([])
+    setStreamingSources(null)
     queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
   }
 
@@ -154,7 +187,7 @@ export default function Chat() {
       setIsStreaming(false)
       setStreamingContent("")
       setOptimisticMessages([])
-      setStreamingSources([])
+      setStreamingSources(null)
       queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId] })
     }
   }, [queryClient])
@@ -176,7 +209,7 @@ export default function Chat() {
     setOptimisticMessages((prev) => [...prev, optimisticUserMsg])
     setIsStreaming(true)
     setStreamingContent("")
-    setStreamingSources([])
+    setStreamingSources(null)
 
     try {
       const wsUrl = chatApi.getWsUrl(selectedSessionId)
@@ -202,8 +235,9 @@ export default function Chat() {
             setIsStreaming(false)
             setStreamingContent("")
             setOptimisticMessages([])
-            setStreamingSources([])
+            setStreamingSources(null)
             queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
+            queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
             ws.close()
             wsRef.current = null
           } else if (data.type === "error") {
@@ -220,7 +254,6 @@ export default function Chat() {
       ws.onerror = async () => {
         ws.close()
         wsRef.current = null
-        // SSE fallback — BE returns text/event-stream, not JSON
         try {
           await handleSseFallback(selectedSessionId, content)
         } catch {
@@ -232,14 +265,13 @@ export default function Chat() {
         wsRef.current = null
       }
     } catch {
-      // SSE fallback
       try {
         await handleSseFallback(selectedSessionId, content)
       } catch {
         // ignore
       }
     }
-  }, [newMessage, selectedSessionId, isStreaming, queryClient])
+  }, [newMessage, selectedSessionId, isStreaming, queryClient, handleSseFallback])
 
   const handleCreateSession = () => {
     if (!newCompanyId) return
@@ -254,18 +286,15 @@ export default function Chat() {
     ...optimisticMessages,
   ]
 
-  const sourcesMap = new Map<string, ChatSource[]>()
-
   const mobileShowChat = selectedSessionId !== null
 
   return (
     <div className="flex h-[calc(100vh-120px)] md:h-[calc(100vh-120px)]" style={{ animation: "fadeInUp 500ms both" }}>
-      {/* Left Panel - Session List (desktop: always, mobile: only when no session selected) */}
+      {/* Left Panel - Session List */}
       <div
         className={`${mobileShowChat ? "hidden" : "flex"} sm:flex flex-col shrink-0 w-full sm:w-[280px]`}
         style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}
       >
-        {/* New Chat Button */}
         <div className="p-4">
           <button
             onClick={() => setShowNewForm((v) => !v)}
@@ -277,7 +306,6 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* New Session Form */}
         {showNewForm && (
           <div className="px-4 pb-4 space-y-3" style={{ animation: "fadeInUp 300ms both" }}>
             <div className="liquid-card p-3 space-y-3">
@@ -326,7 +354,6 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Session List */}
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
           {sessionsQuery.isLoading ? (
             <div className="space-y-2 py-2">
@@ -365,7 +392,7 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Right Panel - Messages (desktop: always, mobile: only when session selected) */}
+      {/* Right Panel - Messages */}
       <div className={`${mobileShowChat ? "flex" : "hidden"} sm:flex flex-1 flex-col min-w-0`}>
         {!selectedSessionId ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
@@ -411,14 +438,13 @@ export default function Chat() {
                           msg.role === "user" ? "bg-[#7966ff]/10" : ""
                         }`}
                       >
-                        <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
-                        {msg.role === "assistant" && sourcesMap.has(msg.id) && (
-                          <div className="mt-3 pt-2 border-t border-white/[0.06]">
-                            <p className="text-xs text-[#a9a9a9] mb-1">{t.chat.sources}</p>
-                            {sourcesMap.get(msg.id)!.map((src, i) => (
-                              <p key={i} className="text-xs text-[#a9a9a9]/70 truncate">{src.text}</p>
-                            ))}
-                          </div>
+                        {msg.role === "user" ? (
+                          <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <MarkdownContent content={msg.content} />
+                        )}
+                        {msg.role === "assistant" && msg.sources && (
+                          <SourcesBadge sources={msg.sources} />
                         )}
                       </div>
                     </div>
@@ -429,10 +455,10 @@ export default function Chat() {
                     <div className="flex justify-start">
                       <div className="liquid-card p-4 max-w-[85%] sm:max-w-[70%]">
                         {streamingContent ? (
-                          <p className="text-sm text-white whitespace-pre-wrap">
-                            {streamingContent}
-                            <span className="inline-block w-2 h-4 bg-[#7966ff] ml-0.5 animate-pulse rounded-sm" />
-                          </p>
+                          <>
+                            <MarkdownContent content={streamingContent} />
+                            <span className="inline-block w-2 h-4 bg-[#7966ff] ml-0.5 animate-pulse rounded-sm align-middle" />
+                          </>
                         ) : (
                           <div className="flex items-center gap-3">
                             <div className="flex gap-1">
@@ -443,13 +469,8 @@ export default function Chat() {
                             <span className="text-xs text-[#a9a9a9] animate-pulse">{t.chat.thinking}</span>
                           </div>
                         )}
-                        {streamingSources.length > 0 && (
-                          <div className="mt-3 pt-2 border-t border-white/[0.06]">
-                            <p className="text-xs text-[#a9a9a9] mb-1">{t.chat.sources}</p>
-                            {streamingSources.map((src, i) => (
-                              <p key={i} className="text-xs text-[#a9a9a9]/70 truncate">{src.text}</p>
-                            ))}
-                          </div>
+                        {streamingSources && (
+                          <SourcesBadge sources={streamingSources} />
                         )}
                       </div>
                     </div>
@@ -508,6 +529,89 @@ export default function Chat() {
           0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
           40% { opacity: 1; transform: scale(1.2); }
         }
+
+        /* ── Markdown styles ── */
+        .markdown-content p { margin-bottom: 0.5em; line-height: 1.7; }
+        .markdown-content p:last-child { margin-bottom: 0; }
+        .markdown-content strong { color: #fff; font-weight: 600; }
+        .markdown-content em { color: #d1d1d1; }
+
+        .markdown-content h1, .markdown-content h2, .markdown-content h3,
+        .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+          color: #fff; font-weight: 600; margin-top: 1em; margin-bottom: 0.4em;
+        }
+        .markdown-content h1 { font-size: 1.25em; }
+        .markdown-content h2 { font-size: 1.15em; }
+        .markdown-content h3 { font-size: 1.05em; }
+
+        .markdown-content ul, .markdown-content ol {
+          padding-left: 1.5em; margin-bottom: 0.75em;
+        }
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        .markdown-content li { margin-bottom: 0.25em; line-height: 1.6; }
+        .markdown-content li::marker { color: #7966ff; }
+
+        .markdown-content code {
+          background: rgba(255,255,255,0.06);
+          padding: 0.15em 0.4em;
+          border-radius: 6px;
+          font-size: 0.9em;
+          font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .markdown-content pre {
+          background: rgba(0,0,0,0.4);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 1em;
+          overflow-x: auto;
+          margin: 0.75em 0;
+        }
+        .markdown-content pre code {
+          background: none; padding: 0; border-radius: 0; font-size: 0.85em;
+        }
+
+        .markdown-content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 0.75em 0;
+          font-size: 0.85em;
+        }
+        .markdown-content thead th {
+          text-align: left;
+          padding: 0.5em 0.75em;
+          border-bottom: 1px solid rgba(121, 102, 255, 0.3);
+          color: #7966ff;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .markdown-content tbody td {
+          padding: 0.4em 0.75em;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          color: #d1d1d1;
+        }
+        .markdown-content tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .markdown-content blockquote {
+          border-left: 3px solid #7966ff;
+          padding-left: 1em;
+          margin: 0.75em 0;
+          color: #a9a9a9;
+        }
+
+        .markdown-content hr {
+          border: none;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          margin: 1em 0;
+        }
+
+        .markdown-content a {
+          color: #22cfff;
+          text-decoration: underline;
+          text-decoration-color: rgba(34, 207, 255, 0.3);
+          text-underline-offset: 2px;
+        }
+        .markdown-content a:hover { text-decoration-color: #22cfff; }
       `}</style>
     </div>
   )
