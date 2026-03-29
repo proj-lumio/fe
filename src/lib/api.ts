@@ -150,6 +150,28 @@ export const generalChatApi = {
   },
 }
 
+// ── Web Search Chat (client discovery) ──────────────
+
+export const webSearchChatApi = {
+  listSessions: () =>
+    api.get<{ items: ChatSession[]; total: number }>("/web-search/sessions").then((r) => r.data),
+
+  createSession: (title?: string) =>
+    api.post<ChatSession>("/web-search/sessions", { title }).then((r) => r.data),
+
+  getSession: (id: string) =>
+    api.get<ChatSessionDetail>(`/web-search/sessions/${id}`).then((r) => r.data),
+
+  deleteSession: (id: string) =>
+    api.delete(`/web-search/sessions/${id}`),
+
+  getWsUrl: (sessionId: string) => {
+    const token = localStorage.getItem("lumio-token") ?? ""
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
+    return `${proto}//${window.location.host}/api/v1/web-search/sessions/${sessionId}/ws?token=${token}`
+  },
+}
+
 // ── Contracts ────────────────────────────────────────
 
 export const contractsApi = {

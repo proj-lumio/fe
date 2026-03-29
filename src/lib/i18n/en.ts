@@ -117,6 +117,7 @@ export const en = {
     graph_entities: "Graph Entities",
     thinking: "Thinking",
     stop: "Stop",
+    web_search: "Web Search",
   },
   ranking: {
     title: "Rankings",

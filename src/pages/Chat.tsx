@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft, FileText, Share2, Globe } from "lucide-react"
+import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft, FileText, Share2, Globe, Search } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { chatApi, generalChatApi, companiesApi } from "@/lib/api"
+import { chatApi, generalChatApi, webSearchChatApi, companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
 import { LiquidInput } from "@ui"
 import type { ChatMessage, ChatSession, ChatSources } from "@/types"
+
+type SessionScope = "company" | "global" | "web_search"
 
 const GENERAL_VALUE = "__general__"
 
@@ -58,9 +60,35 @@ function SourcesBadge({ sources }: { sources: ChatSources }) {
   )
 }
 
-function isGlobalSession(session: ChatSession | undefined | null): boolean {
-  if (!session) return false
-  return session.scope === "global" || session.company_id === null
+function getSessionScope(session: ChatSession | undefined | null): SessionScope {
+  if (!session) return "company"
+  if (session.scope === "web_search") return "web_search"
+  if (session.scope === "global" || session.company_id === null) return "global"
+  return "company"
+}
+
+function getApiBaseForScope(scope: SessionScope): string {
+  if (scope === "web_search") return "web-search"
+  if (scope === "global") return "general-chat"
+  return "chat"
+}
+
+function getWsUrlForScope(scope: SessionScope, sessionId: string): string {
+  if (scope === "web_search") return webSearchChatApi.getWsUrl(sessionId)
+  if (scope === "global") return generalChatApi.getWsUrl(sessionId)
+  return chatApi.getWsUrl(sessionId)
+}
+
+function getSessionForScope(scope: SessionScope, id: string) {
+  if (scope === "web_search") return webSearchChatApi.getSession(id)
+  if (scope === "global") return generalChatApi.getSession(id)
+  return chatApi.getSession(id)
+}
+
+function deleteSessionForScope(scope: SessionScope, id: string) {
+  if (scope === "web_search") return webSearchChatApi.deleteSession(id)
+  if (scope === "global") return generalChatApi.deleteSession(id)
+  return chatApi.deleteSession(id)
 }
 
 export default function Chat() {
@@ -68,7 +96,7 @@ export default function Chat() {
   const queryClient = useQueryClient()
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
-  const [selectedScope, setSelectedScope] = useState<"company" | "global">("company")
+  const [selectedScope, setSelectedScope] = useState<SessionScope>("company")
   const [newMessage, setNewMessage] = useState("")
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
@@ -77,12 +105,15 @@ export default function Chat() {
   const [newCompanyId, setNewCompanyId] = useState(GENERAL_VALUE)
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([])
   const [streamingSources, setStreamingSources] = useState<ChatSources | null>(null)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Per-session web search toggle memory
+  const webSearchPerSession = useRef<Map<string, boolean>>(new Map())
 
-  // Fetch both session lists
+  // Fetch all three session lists
   const companySessionsQuery = useQuery({
     queryKey: ["chatSessions"],
     queryFn: () => chatApi.listSessions(),
@@ -93,25 +124,28 @@ export default function Chat() {
     queryFn: () => generalChatApi.listSessions(),
   })
 
+  const webSearchSessionsQuery = useQuery({
+    queryKey: ["webSearchChatSessions"],
+    queryFn: () => webSearchChatApi.listSessions(),
+  })
+
   // Merge and sort all sessions by updated_at desc, deduplicated by ID
   const allSessions = useMemo(() => {
     const general = (generalSessionsQuery.data?.items ?? []).map((s) => ({ ...s, scope: s.scope ?? "global" as const }))
-    const generalIds = new Set(general.map((s) => s.id))
+    const webSearch = (webSearchSessionsQuery.data?.items ?? []).map((s) => ({ ...s, scope: s.scope ?? "web_search" as const }))
+    const knownIds = new Set([...general.map((s) => s.id), ...webSearch.map((s) => s.id)])
     const company = (companySessionsQuery.data?.items ?? [])
-      .filter((s) => !generalIds.has(s.id))
+      .filter((s) => !knownIds.has(s.id))
       .map((s) => ({ ...s, scope: s.scope ?? "company" as const }))
-    return [...company, ...general].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-  }, [companySessionsQuery.data, generalSessionsQuery.data])
+    return [...company, ...general, ...webSearch].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  }, [companySessionsQuery.data, generalSessionsQuery.data, webSearchSessionsQuery.data])
 
-  const sessionsLoading = companySessionsQuery.isLoading || generalSessionsQuery.isLoading
+  const sessionsLoading = companySessionsQuery.isLoading || generalSessionsQuery.isLoading || webSearchSessionsQuery.isLoading
 
   // Use the right API based on scope
   const sessionDetailQuery = useQuery({
     queryKey: ["chatSession", selectedSessionId, selectedScope],
-    queryFn: () =>
-      selectedScope === "global"
-        ? generalChatApi.getSession(selectedSessionId!)
-        : chatApi.getSession(selectedSessionId!),
+    queryFn: () => getSessionForScope(selectedScope, selectedSessionId!),
     enabled: !!selectedSessionId,
   })
 
@@ -129,28 +163,36 @@ export default function Chat() {
       return chatApi.createSession({ company_id: data.company_id, title: data.title })
     },
     onSuccess: (session) => {
-      queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
-      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
-      const scope = isGlobalSession(session) ? "global" : "company"
+      invalidateAllSessions()
+      const scope = getSessionScope(session)
       setSelectedScope(scope)
       setSelectedSessionId(session.id)
       setShowNewForm(false)
       setNewTitle("")
       setNewCompanyId(GENERAL_VALUE)
+      setWebSearchEnabled(false)
+      webSearchPerSession.current.set(session.id, false)
     },
   })
 
   const deleteSessionMutation = useMutation({
-    mutationFn: ({ id, scope }: { id: string; scope: "company" | "global" }) =>
-      scope === "global" ? generalChatApi.deleteSession(id) : chatApi.deleteSession(id),
+    mutationFn: ({ id, scope }: { id: string; scope: SessionScope }) =>
+      deleteSessionForScope(scope, id),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
-      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
+      invalidateAllSessions()
+      webSearchPerSession.current.delete(id)
       if (selectedSessionId === id) {
         setSelectedSessionId(null)
+        setWebSearchEnabled(false)
       }
     },
   })
+
+  function invalidateAllSessions() {
+    queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
+    queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
+    queryClient.invalidateQueries({ queryKey: ["webSearchChatSessions"] })
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -173,13 +215,20 @@ export default function Chat() {
   }, [selectedSessionId])
 
   function selectSession(session: ChatSession) {
-    const scope = isGlobalSession(session) ? "global" : "company"
+    const scope = getSessionScope(session)
     setSelectedScope(scope)
     setSelectedSessionId(session.id)
+    // Restore per-session web search state
+    setWebSearchEnabled(webSearchPerSession.current.get(session.id) ?? false)
   }
 
-  function getApiBase(): "chat" | "general-chat" {
-    return selectedScope === "global" ? "general-chat" : "chat"
+  function toggleWebSearch() {
+    if (isStreaming) return
+    const next = !webSearchEnabled
+    setWebSearchEnabled(next)
+    if (selectedSessionId) {
+      webSearchPerSession.current.set(selectedSessionId, next)
+    }
   }
 
   function stopStreaming() {
@@ -204,50 +253,96 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId, selectedScope] })
   }
 
-  const handleSseFallback = useCallback(async (sessionId: string, content: string, apiBase: string) => {
-    const token = localStorage.getItem("lumio-token") ?? ""
-    let accumulated = ""
-    try {
-      const res = await fetch(`/api/v1/${apiBase}/sessions/${sessionId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
-      })
-      if (!res.ok || !res.body) throw new Error("SSE request failed")
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
-        buffer = lines.pop() ?? ""
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue
-          try {
-            const data = JSON.parse(line.slice(6))
-            if (data.type === "chunk") {
-              accumulated += data.data
-              setStreamingContent(accumulated)
-            } else if (data.type === "sources") {
-              setStreamingSources(data.data)
-            } else if (data.type === "done") {
-              // done
-            } else if (data.type === "error") {
-              break
-            }
-          } catch { /* ignore parse errors */ }
+  const streamMessage = useCallback(async (sessionId: string, scope: SessionScope, content: string) => {
+    const apiBase = getApiBaseForScope(scope)
+    const wsUrl = getWsUrlForScope(scope, sessionId)
+
+    const handleSseFallback = async () => {
+      const token = localStorage.getItem("lumio-token") ?? ""
+      let accumulated = ""
+      try {
+        const res = await fetch(`/api/v1/${apiBase}/sessions/${sessionId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ content }),
+        })
+        if (!res.ok || !res.body) throw new Error("SSE request failed")
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ""
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split("\n")
+          buffer = lines.pop() ?? ""
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.type === "chunk") {
+                accumulated += data.data
+                setStreamingContent(accumulated)
+              } else if (data.type === "sources") {
+                setStreamingSources(data.data)
+              } else if (data.type === "done" || data.type === "error") {
+                break
+              }
+            } catch { /* ignore */ }
+          }
         }
+      } finally {
+        setIsStreaming(false)
+        setStreamingContent("")
+        setOptimisticMessages([])
+        setStreamingSources(null)
+        queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId, scope] })
+        invalidateAllSessions()
       }
-    } finally {
-      setIsStreaming(false)
-      setStreamingContent("")
-      setOptimisticMessages([])
-      setStreamingSources(null)
-      queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId] })
-      queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
-      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
+    }
+
+    try {
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+      let accumulated = ""
+
+      ws.onopen = () => ws.send(JSON.stringify({ content }))
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === "chunk") {
+            accumulated += data.data
+            setStreamingContent(accumulated)
+          } else if (data.type === "sources") {
+            setStreamingSources(data.data)
+          } else if (data.type === "done") {
+            setIsStreaming(false)
+            setStreamingContent("")
+            setOptimisticMessages([])
+            setStreamingSources(null)
+            queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId, scope] })
+            invalidateAllSessions()
+            ws.close()
+            wsRef.current = null
+          } else if (data.type === "error") {
+            setIsStreaming(false)
+            setStreamingContent("")
+            ws.close()
+            wsRef.current = null
+          }
+        } catch { /* ignore */ }
+      }
+
+      ws.onerror = async () => {
+        ws.close()
+        wsRef.current = null
+        try { await handleSseFallback() } catch { /* ignore */ }
+      }
+
+      ws.onclose = () => { wsRef.current = null }
+    } catch {
+      try { await handleSseFallback() } catch { /* ignore */ }
     }
   }, [queryClient])
 
@@ -270,72 +365,25 @@ export default function Chat() {
     setStreamingContent("")
     setStreamingSources(null)
 
-    const apiBase = getApiBase()
-    const wsUrl = selectedScope === "global"
-      ? generalChatApi.getWsUrl(selectedSessionId)
-      : chatApi.getWsUrl(selectedSessionId)
-
-    try {
-      const ws = new WebSocket(wsUrl)
-      wsRef.current = ws
-
-      let accumulated = ""
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ content }))
-      }
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-
-          if (data.type === "chunk") {
-            accumulated += data.data
-            setStreamingContent(accumulated)
-          } else if (data.type === "sources") {
-            setStreamingSources(data.data)
-          } else if (data.type === "done") {
-            setIsStreaming(false)
-            setStreamingContent("")
-            setOptimisticMessages([])
-            setStreamingSources(null)
-            queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId, selectedScope] })
-            queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
-            queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
-            ws.close()
-            wsRef.current = null
-          } else if (data.type === "error") {
-            setIsStreaming(false)
-            setStreamingContent("")
-            ws.close()
-            wsRef.current = null
-          }
-        } catch {
-          // ignore parse errors
-        }
-      }
-
-      ws.onerror = async () => {
-        ws.close()
-        wsRef.current = null
-        try {
-          await handleSseFallback(selectedSessionId, content, apiBase)
-        } catch {
-          // ignore
-        }
-      }
-
-      ws.onclose = () => {
-        wsRef.current = null
-      }
-    } catch {
+    // If web search is ON but session is NOT web_search → create a web_search session
+    if (webSearchEnabled && selectedScope !== "web_search") {
       try {
-        await handleSseFallback(selectedSessionId, content, apiBase)
+        const wsSession = await webSearchChatApi.createSession()
+        invalidateAllSessions()
+        setSelectedScope("web_search")
+        setSelectedSessionId(wsSession.id)
+        webSearchPerSession.current.set(wsSession.id, true)
+        await streamMessage(wsSession.id, "web_search", content)
       } catch {
-        // ignore
+        setIsStreaming(false)
+        setStreamingContent("")
+        setOptimisticMessages([])
       }
+      return
     }
-  }, [newMessage, selectedSessionId, selectedScope, isStreaming, queryClient, handleSseFallback])
+
+    await streamMessage(selectedSessionId, selectedScope, content)
+  }, [newMessage, selectedSessionId, selectedScope, isStreaming, webSearchEnabled, streamMessage])
 
   const handleCreateSession = () => {
     if (!newCompanyId) return
@@ -429,7 +477,7 @@ export default function Chat() {
             </div>
           ) : (
             allSessions.map((session) => {
-              const isGlobal = isGlobalSession(session)
+              const scope = getSessionScope(session)
               return (
                 <div
                   key={session.id}
@@ -443,7 +491,9 @@ export default function Chat() {
                   }}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {isGlobal ? (
+                    {scope === "web_search" ? (
+                      <Search className="w-4 h-4 text-[#22cfff] shrink-0" />
+                    ) : scope === "global" ? (
                       <Globe className="w-4 h-4 text-[#22cfff] shrink-0" />
                     ) : (
                       <MessageSquare className="w-4 h-4 text-[#7966ff] shrink-0" />
@@ -453,10 +503,7 @@ export default function Chat() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      deleteSessionMutation.mutate({
-                        id: session.id,
-                        scope: isGlobal ? "global" : "company",
-                      })
+                      deleteSessionMutation.mutate({ id: session.id, scope })
                     }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-[#a9a9a9] hover:text-[#ff4b44]"
                   >
@@ -578,6 +625,29 @@ export default function Chat() {
                   disabled={isStreaming}
                 />
               </div>
+
+              {/* Web Search Toggle */}
+              <button
+                onClick={toggleWebSearch}
+                disabled={isStreaming}
+                className="flex h-11 w-11 shrink-0 items-center justify-center transition-all duration-200 active:scale-[0.95] disabled:opacity-40"
+                style={{
+                  borderRadius: 12,
+                  background: webSearchEnabled
+                    ? "rgba(34, 207, 255, 0.15)"
+                    : "rgba(255, 255, 255, 0.04)",
+                  border: webSearchEnabled
+                    ? "1px solid rgba(34, 207, 255, 0.3)"
+                    : "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+                title={t.chat.web_search}
+              >
+                <Globe
+                  className="w-[18px] h-[18px] transition-colors duration-200"
+                  style={{ color: webSearchEnabled ? "#22cfff" : "#a9a9a9" }}
+                />
+              </button>
+
               {isStreaming ? (
                 <button
                   onClick={stopStreaming}

@@ -117,6 +117,7 @@ export const it = {
     graph_entities: "Entita Grafo",
     thinking: "Pensando",
     stop: "Stop",
+    web_search: "Ricerca Web",
   },
   ranking: {
     title: "Classifiche",
