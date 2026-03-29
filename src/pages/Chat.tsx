@@ -401,11 +401,10 @@ export default function Chat() {
   const mobileShowChat = selectedSessionId !== null
 
   return (
-    <div className="flex h-[calc(100vh-120px)] md:h-[calc(100vh-120px)]" style={{ animation: "fadeInUp 500ms both" }}>
+    <div className="flex flex-col sm:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-120px)] overflow-hidden" style={{ animation: "fadeInUp 500ms both" }}>
       {/* Left Panel - Session List */}
       <div
-        className={`${mobileShowChat ? "hidden" : "flex"} sm:flex flex-col shrink-0 w-full sm:w-[280px]`}
-        style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}
+        className={`${mobileShowChat ? "hidden" : "flex"} sm:flex flex-col shrink-0 w-full sm:w-[280px] h-full sm:border-r sm:border-white/[0.06]`}
       >
         <div className="p-4">
           <button
@@ -517,7 +516,7 @@ export default function Chat() {
       </div>
 
       {/* Right Panel - Messages */}
-      <div className={`${mobileShowChat ? "flex" : "hidden"} sm:flex flex-1 flex-col min-w-0`}>
+      <div className={`${mobileShowChat ? "flex" : "hidden"} sm:flex flex-1 flex-col min-w-0 h-full`}>
         {!selectedSessionId ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <MessageSquare className="w-12 h-12 text-[#a9a9a9]/30" />

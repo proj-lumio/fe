@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Coins, CreditCard, FileText, MessageSquare } from "lucide-react"
+import { Coins, CreditCard, Zap, Hash } from "lucide-react"
 import {
   AreaChart,
   Area,
@@ -52,18 +52,25 @@ export default function Analytics() {
     )
   }
 
+  const summary = data?.summary
+  const plan = data?.plan
+
   const stats = [
-    { icon: Coins, label: t.analytics.total_tokens, value: data?.total_tokens_used?.toLocaleString() ?? "0" },
-    { icon: CreditCard, label: t.analytics.credits_used, value: data?.total_credits_used?.toLocaleString() ?? "0" },
-    { icon: FileText, label: t.analytics.documents_processed, value: data?.documents_processed?.toLocaleString() ?? "0" },
-    { icon: MessageSquare, label: t.analytics.chat_messages, value: data?.chat_messages?.toLocaleString() ?? "0" },
+    { icon: Coins, label: t.analytics.total_tokens, value: summary?.total_tokens?.toLocaleString() ?? "0" },
+    { icon: CreditCard, label: t.analytics.credits_used, value: summary?.credits_used?.toLocaleString() ?? "0" },
+    { icon: Zap, label: t.analytics.credits_remaining, value: plan?.credits_remaining?.toLocaleString() ?? "0" },
+    { icon: Hash, label: t.analytics.requests, value: summary?.request_count?.toLocaleString() ?? "0" },
   ]
 
-  const chartData = data?.usage_by_day ?? []
+  const chartData = (data?.by_day ?? []).map((d) => ({
+    date: d.date,
+    tokens: d.total_tokens,
+    credits: d.credits,
+  }))
 
   return (
     <div className="space-y-6 pt-2">
-      {/* Header — title left, period selector right */}
+      {/* Header */}
       <div
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         style={{ animation: "fadeInUp 500ms both" }}
@@ -133,11 +140,32 @@ export default function Analytics() {
                 }}
                 labelStyle={{ color: "#a9a9a9" }}
               />
-              <Area type="monotone" dataKey="tokens" stroke="#7966ff" strokeWidth={2} fill="url(#tokensFill)" />
+              <Area type="monotone" dataKey="tokens" stroke="#7966ff" strokeWidth={2} fill="url(#tokensFill)" name={t.analytics.total_tokens} />
             </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* By Endpoint breakdown */}
+      {(data?.by_endpoint?.length ?? 0) > 0 && (
+        <div
+          className="liquid-card p-4 sm:p-6"
+          style={{ animation: "fadeInUp 500ms 900ms both" }}
+        >
+          <h2 className="text-lg font-bold uppercase text-white mb-4">{t.analytics.by_endpoint}</h2>
+          <div className="space-y-2">
+            {data!.by_endpoint.map((ep) => (
+              <div key={ep.endpoint} className="flex items-center justify-between py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <span className="text-sm text-white">{ep.endpoint}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-[#a9a9a9]">{ep.request_count} req</span>
+                  <span className="text-sm font-medium text-[#7966ff]">{ep.credits.toLocaleString()} credits</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeInUp {

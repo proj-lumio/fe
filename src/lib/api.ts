@@ -15,7 +15,7 @@ import type {
   Contract,
   DependencyBreakdown,
   RankingEntry,
-  AnalyticsSummary,
+  AnalyticsDashboard,
   KnowledgeGraph,
   Settings,
   SettingsUpdate,
@@ -199,10 +199,13 @@ export const rankingsApi = {
 
 export const analyticsApi = {
   summary: (days?: number) =>
-    api.get<AnalyticsSummary>("/analytics", { params: days ? { days } : undefined }).then((r) => r.data),
+    api.get<AnalyticsDashboard>("/analytics", { params: days ? { days } : undefined }).then((r) => r.data),
 
   graph: (companyId: string) =>
     api.get<KnowledgeGraph>(`/analytics/graph/${companyId}`).then((r) => r.data),
+
+  nationalGraph: () =>
+    api.get<KnowledgeGraph>("/analytics/graph/national").then((r) => r.data),
 }
 
 // ── Settings ─────────────────────────────────────────

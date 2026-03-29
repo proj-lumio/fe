@@ -100,7 +100,7 @@ export default function Dashboard() {
     {
       icon: FileText,
       label: t.dashboard.total_documents,
-      value: analytics?.documents_processed ?? 0,
+      value: analytics?.summary?.request_count ?? 0,
     },
     {
       icon: MessageSquare,
@@ -110,7 +110,7 @@ export default function Dashboard() {
     {
       icon: Coins,
       label: t.dashboard.total_tokens,
-      value: analytics?.total_tokens_used?.toLocaleString() ?? "0",
+      value: analytics?.summary?.total_tokens?.toLocaleString() ?? "0",
     },
   ]
 

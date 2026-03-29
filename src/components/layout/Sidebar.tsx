@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom"
 import { useAuthStore } from "@/store/auth"
 import {
   LayoutDashboard,
+  Waypoints,
   Building2,
   MessageSquare,
   Trophy,
@@ -13,6 +14,7 @@ import { useState } from "react"
 
 const NAV_ITEMS = [
   { key: "dashboard" as const, path: "/dashboard", icon: LayoutDashboard },
+  { key: "graph" as const, path: "/graph", icon: Waypoints },
   { key: "companies" as const, path: "/companies", icon: Building2 },
   { key: "chat" as const, path: "/chat", icon: MessageSquare },
   { key: "ranking" as const, path: "/ranking", icon: Trophy },

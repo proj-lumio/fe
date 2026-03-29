@@ -210,22 +210,51 @@ export interface RankingEntry {
 
 // ── Analytics ────────────────────────────────────────
 
-export interface UsageByDay {
+export interface AnalyticsByDay {
   date: string
-  tokens: number
-  documents: number
-  messages: number
+  total_tokens: number
+  prompt_tokens: number
+  completion_tokens: number
+  credits: number
+  request_count: number
 }
 
-export interface AnalyticsSummary {
-  total_tokens_used: number
-  total_credits_used: number
-  plan: string
+export interface AnalyticsByEndpoint {
+  endpoint: string
+  total_tokens: number
+  prompt_tokens: number
+  completion_tokens: number
+  credits: number
+  request_count: number
+}
+
+export interface AnalyticsPlan {
+  plan_id: string
+  plan: Record<string, unknown>
+  billing_period_start: string
+  credits_total: number | null
+  credits_used: number
   credits_remaining: number
-  documents_processed: number
-  chat_messages: number
-  usage_by_day: UsageByDay[]
-  system_costs: Record<string, unknown>
+  tokens_used: number
+}
+
+export interface AnalyticsDashboard {
+  summary: {
+    total_prompt_tokens: number
+    total_completion_tokens: number
+    total_tokens: number
+    request_count: number
+    credits_used: number
+    credits_prompt: number
+    credits_completion: number
+    period_start: string
+    period_end: string
+  }
+  by_endpoint: AnalyticsByEndpoint[]
+  by_day: AnalyticsByDay[]
+  plan: AnalyticsPlan
+  credit_factor: number
+  cost_estimates: Record<string, number>
 }
 
 export interface GraphNode {

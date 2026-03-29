@@ -101,6 +101,15 @@ export const it = {
     dependency_score: "Punteggio Dipendenza",
     created: "Creato",
   },
+  graph: {
+    title: "Knowledge Graph",
+    no_data: "Nessun dato disponibile. Carica documenti per costruire il knowledge graph.",
+    nodes: "Nodi",
+    edges: "Connessioni",
+    company: "Azienda",
+    document: "Documento",
+    entity: "Entita",
+  },
   chat: {
     title: "Chat",
     new_session: "Nuova Chat",
@@ -135,8 +144,7 @@ export const it = {
     title: "Analitiche",
     total_tokens: "Token Totali",
     credits_used: "Crediti Utilizzati",
-    documents_processed: "Documenti Elaborati",
-    chat_messages: "Messaggi Chat",
+    credits_remaining: "Crediti Rimanenti",
     usage_chart: "Utilizzo nel Tempo",
     prompt_tokens: "Token Prompt",
     completion_tokens: "Token Completamento",
@@ -175,6 +183,7 @@ export const it = {
   },
   nav: {
     dashboard: "Dashboard",
+    graph: "Grafo",
     companies: "Aziende",
     chat: "Chat",
     ranking: "Classifiche",

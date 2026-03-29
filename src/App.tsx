@@ -9,6 +9,7 @@ import Landing from "@/pages/landing"
 import Login from "@/pages/login"
 
 const Dashboard = lazy(() => import("@/pages/dashboard"))
+const Graph = lazy(() => import("@/pages/graph"))
 const Companies = lazy(() => import("@/pages/companies"))
 const CompanyDetail = lazy(() => import("@/pages/company_detail"))
 const Chat = lazy(() => import("@/pages/chat"))
@@ -40,6 +41,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+            <Route path="/graph" element={<Suspense fallback={<PageLoader />}><Graph /></Suspense>} />
             <Route path="/companies" element={<Suspense fallback={<PageLoader />}><Companies /></Suspense>} />
             <Route path="/companies/:id" element={<Suspense fallback={<PageLoader />}><CompanyDetail /></Suspense>} />
             <Route path="/chat" element={<Suspense fallback={<PageLoader />}><Chat /></Suspense>} />
