@@ -22,6 +22,7 @@ export default function Graph() {
   const graphRef = useRef<{ zoomToFit: (ms?: number, padding?: number) => void } | undefined>(undefined)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("__national__")
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640
 
   const companiesQuery = useQuery({
     queryKey: ["companies"],
@@ -106,7 +107,7 @@ export default function Graph() {
 
   return (
     <div
-      className="flex flex-col h-[calc(100vh-120px)] md:h-[calc(100vh-120px)] overflow-hidden"
+      className="flex flex-col h-[calc(100dvh-180px)] sm:h-[calc(100dvh-140px)] md:h-[calc(100vh-120px)] overflow-hidden"
       style={{ animation: "fadeInUp 500ms both", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       {/* Header */}
@@ -176,8 +177,8 @@ export default function Graph() {
             linkDirectionalParticleWidth={1.5}
             linkDirectionalParticleColor={() => "#7966ff"}
             cooldownTicks={100}
-            enableZoomInteraction={true}
-            enablePanInteraction={true}
+            enableZoomInteraction={!isMobile}
+            enablePanInteraction={!isMobile}
           />
         )}
       </div>
