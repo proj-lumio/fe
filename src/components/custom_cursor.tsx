@@ -7,6 +7,13 @@ export function CustomCursor() {
     const cursor = cursorRef.current
     if (!cursor) return
 
+    // Disable on touch devices
+    const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0
+    if (isTouch) {
+      cursor.style.display = "none"
+      return
+    }
+
     // Hidden until first mouse move
     let hasMoved = false
 
