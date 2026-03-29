@@ -17,6 +17,7 @@ export default defineConfig({
       "/api": {
         target: "http://178.215.237.216",
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => `/guest${path}`,
       },
     },

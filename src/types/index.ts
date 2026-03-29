@@ -137,6 +137,7 @@ export interface ChatMessage {
   user_id: string
   role: "user" | "assistant"
   content: string
+  sources?: ChatSources | null
   created_at: string
 }
 
@@ -144,16 +145,19 @@ export interface ChatSessionDetail extends ChatSession {
   messages: ChatMessage[]
 }
 
-export interface ChatSource {
+export interface ChatVectorResult {
   document_id: string
-  chunk_id: string
-  text: string
   score: number
+}
+
+export interface ChatSources {
+  vector_results: ChatVectorResult[]
+  graph_entities: Record<string, unknown>[]
 }
 
 export interface ChatMessageResponse {
   message: ChatMessage
-  sources: ChatSource[]
+  sources: ChatSources
 }
 
 export interface ChatSessionCreate {
