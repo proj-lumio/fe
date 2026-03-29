@@ -15,8 +15,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: "http://178.215.237.216",
         changeOrigin: true,
+        rewrite: (path) => `/guest${path}`,
       },
     },
   },
