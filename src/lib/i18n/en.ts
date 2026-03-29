@@ -111,6 +111,7 @@ export const en = {
     placeholder: "Type your message...",
     no_sessions: "No chat sessions yet",
     no_messages: "Start a conversation",
+    general: "General (All Companies)",
     sources: "Sources",
     vector_results: "Document Matches",
     graph_entities: "Graph Entities",

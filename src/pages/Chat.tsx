@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect, useCallback, memo } from "react"
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft, FileText, Share2 } from "lucide-react"
+import { Plus, Send, Square, Trash2, MessageSquare, Loader2, ChevronLeft, FileText, Share2, Globe } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { chatApi, companiesApi } from "@/lib/api"
+import { chatApi, generalChatApi, companiesApi } from "@/lib/api"
 import { useTranslations } from "@/hooks/useTranslations"
 import { LiquidInput } from "@ui"
-import type { ChatMessage, ChatSources } from "@/types"
+import type { ChatMessage, ChatSession, ChatSources } from "@/types"
+
+const GENERAL_VALUE = "__general__"
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-2xl bg-white/[0.06] ${className}`} />
@@ -56,31 +58,60 @@ function SourcesBadge({ sources }: { sources: ChatSources }) {
   )
 }
 
+function isGlobalSession(session: ChatSession | undefined | null): boolean {
+  if (!session) return false
+  return session.scope === "global" || session.company_id === null
+}
+
 export default function Chat() {
   const t = useTranslations()
   const queryClient = useQueryClient()
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  const [selectedScope, setSelectedScope] = useState<"company" | "global">("company")
   const [newMessage, setNewMessage] = useState("")
   const [streamingContent, setStreamingContent] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
   const [showNewForm, setShowNewForm] = useState(false)
   const [newTitle, setNewTitle] = useState("")
-  const [newCompanyId, setNewCompanyId] = useState("")
+  const [newCompanyId, setNewCompanyId] = useState(GENERAL_VALUE)
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([])
   const [streamingSources, setStreamingSources] = useState<ChatSources | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const sessionsQuery = useQuery({
+  // Fetch both session lists
+  const companySessionsQuery = useQuery({
     queryKey: ["chatSessions"],
     queryFn: () => chatApi.listSessions(),
   })
 
+  const generalSessionsQuery = useQuery({
+    queryKey: ["generalChatSessions"],
+    queryFn: () => generalChatApi.listSessions(),
+  })
+
+  // Merge and sort all sessions by updated_at desc, deduplicated by ID
+  const allSessions = useMemo(() => {
+    const general = (generalSessionsQuery.data?.items ?? []).map((s) => ({ ...s, scope: s.scope ?? "global" as const }))
+    const generalIds = new Set(general.map((s) => s.id))
+    const company = (companySessionsQuery.data?.items ?? [])
+      .filter((s) => !generalIds.has(s.id))
+      .map((s) => ({ ...s, scope: s.scope ?? "company" as const }))
+    return [...company, ...general].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  }, [companySessionsQuery.data, generalSessionsQuery.data])
+
+  const sessionsLoading = companySessionsQuery.isLoading || generalSessionsQuery.isLoading
+
+  // Use the right API based on scope
   const sessionDetailQuery = useQuery({
-    queryKey: ["chatSession", selectedSessionId],
-    queryFn: () => chatApi.getSession(selectedSessionId!),
+    queryKey: ["chatSession", selectedSessionId, selectedScope],
+    queryFn: () =>
+      selectedScope === "global"
+        ? generalChatApi.getSession(selectedSessionId!)
+        : chatApi.getSession(selectedSessionId!),
     enabled: !!selectedSessionId,
   })
 
@@ -91,21 +122,30 @@ export default function Chat() {
   })
 
   const createSessionMutation = useMutation({
-    mutationFn: (data: { company_id: string; title?: string }) =>
-      chatApi.createSession(data),
+    mutationFn: (data: { company_id: string; title?: string }) => {
+      if (data.company_id === GENERAL_VALUE) {
+        return generalChatApi.createSession(data.title)
+      }
+      return chatApi.createSession({ company_id: data.company_id, title: data.title })
+    },
     onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
+      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
+      const scope = isGlobalSession(session) ? "global" : "company"
+      setSelectedScope(scope)
       setSelectedSessionId(session.id)
       setShowNewForm(false)
       setNewTitle("")
-      setNewCompanyId("")
+      setNewCompanyId(GENERAL_VALUE)
     },
   })
 
   const deleteSessionMutation = useMutation({
-    mutationFn: (id: string) => chatApi.deleteSession(id),
-    onSuccess: (_, id) => {
+    mutationFn: ({ id, scope }: { id: string; scope: "company" | "global" }) =>
+      scope === "global" ? generalChatApi.deleteSession(id) : chatApi.deleteSession(id),
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
+      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
       if (selectedSessionId === id) {
         setSelectedSessionId(null)
       }
@@ -116,6 +156,13 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [sessionDetailQuery.data?.messages, optimisticMessages, streamingContent])
 
+  // Auto-focus input when session is selected or streaming ends
+  useEffect(() => {
+    if (selectedSessionId && !isStreaming) {
+      inputRef.current?.focus()
+    }
+  }, [selectedSessionId, isStreaming])
+
   useEffect(() => {
     return () => {
       if (wsRef.current) {
@@ -124,6 +171,16 @@ export default function Chat() {
       }
     }
   }, [selectedSessionId])
+
+  function selectSession(session: ChatSession) {
+    const scope = isGlobalSession(session) ? "global" : "company"
+    setSelectedScope(scope)
+    setSelectedSessionId(session.id)
+  }
+
+  function getApiBase(): "chat" | "general-chat" {
+    return selectedScope === "global" ? "general-chat" : "chat"
+  }
 
   function stopStreaming() {
     if (wsRef.current) {
@@ -144,14 +201,14 @@ export default function Chat() {
     }
     setStreamingContent("")
     setStreamingSources(null)
-    queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
+    queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId, selectedScope] })
   }
 
-  const handleSseFallback = useCallback(async (sessionId: string, content: string) => {
+  const handleSseFallback = useCallback(async (sessionId: string, content: string, apiBase: string) => {
     const token = localStorage.getItem("lumio-token") ?? ""
     let accumulated = ""
     try {
-      const res = await fetch(`/api/v1/chat/sessions/${sessionId}/messages`, {
+      const res = await fetch(`/api/v1/${apiBase}/sessions/${sessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content }),
@@ -189,6 +246,8 @@ export default function Chat() {
       setOptimisticMessages([])
       setStreamingSources(null)
       queryClient.invalidateQueries({ queryKey: ["chatSession", sessionId] })
+      queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
+      queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
     }
   }, [queryClient])
 
@@ -211,8 +270,12 @@ export default function Chat() {
     setStreamingContent("")
     setStreamingSources(null)
 
+    const apiBase = getApiBase()
+    const wsUrl = selectedScope === "global"
+      ? generalChatApi.getWsUrl(selectedSessionId)
+      : chatApi.getWsUrl(selectedSessionId)
+
     try {
-      const wsUrl = chatApi.getWsUrl(selectedSessionId)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
@@ -236,8 +299,9 @@ export default function Chat() {
             setStreamingContent("")
             setOptimisticMessages([])
             setStreamingSources(null)
-            queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId] })
+            queryClient.invalidateQueries({ queryKey: ["chatSession", selectedSessionId, selectedScope] })
             queryClient.invalidateQueries({ queryKey: ["chatSessions"] })
+            queryClient.invalidateQueries({ queryKey: ["generalChatSessions"] })
             ws.close()
             wsRef.current = null
           } else if (data.type === "error") {
@@ -255,7 +319,7 @@ export default function Chat() {
         ws.close()
         wsRef.current = null
         try {
-          await handleSseFallback(selectedSessionId, content)
+          await handleSseFallback(selectedSessionId, content, apiBase)
         } catch {
           // ignore
         }
@@ -266,12 +330,12 @@ export default function Chat() {
       }
     } catch {
       try {
-        await handleSseFallback(selectedSessionId, content)
+        await handleSseFallback(selectedSessionId, content, apiBase)
       } catch {
         // ignore
       }
     }
-  }, [newMessage, selectedSessionId, isStreaming, queryClient, handleSseFallback])
+  }, [newMessage, selectedSessionId, selectedScope, isStreaming, queryClient, handleSseFallback])
 
   const handleCreateSession = () => {
     if (!newCompanyId) return
@@ -316,7 +380,7 @@ export default function Chat() {
                 className="w-full bg-transparent text-white text-sm px-3 py-2 focus:outline-none liquid-input"
                 style={{ borderRadius: 14, height: 40 }}
               >
-                <option value="" disabled className="bg-[#1f1f1f]">{t.chat.select_company}</option>
+                <option value={GENERAL_VALUE} className="bg-[#1f1f1f]">{t.chat.general}</option>
                 {companiesQuery.data?.items.map((c) => (
                   <option key={c.id} value={c.id} className="bg-[#1f1f1f]">{c.name}</option>
                 ))}
@@ -332,7 +396,7 @@ export default function Chat() {
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateSession}
-                  disabled={!newCompanyId || createSessionMutation.isPending}
+                  disabled={createSessionMutation.isPending}
                   className="liquid-card-btn flex-1 px-3 py-2 text-white text-sm font-medium active:scale-[0.98] transition-transform duration-200 disabled:opacity-40"
                   style={{ borderRadius: 12 }}
                 >
@@ -343,7 +407,7 @@ export default function Chat() {
                   )}
                 </button>
                 <button
-                  onClick={() => { setShowNewForm(false); setNewTitle(""); setNewCompanyId("") }}
+                  onClick={() => { setShowNewForm(false); setNewTitle(""); setNewCompanyId(GENERAL_VALUE) }}
                   className="liquid-card-btn px-3 py-2 text-[#a9a9a9] text-sm active:scale-[0.98] transition-transform duration-200"
                   style={{ borderRadius: 12 }}
                 >
@@ -355,39 +419,52 @@ export default function Chat() {
         )}
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
-          {sessionsQuery.isLoading ? (
+          {sessionsLoading ? (
             <div className="space-y-2 py-2">
               {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
-          ) : sessionsQuery.data?.items.length === 0 ? (
+          ) : allSessions.length === 0 ? (
             <div className="liquid-card p-4 mt-2">
               <p className="text-sm text-[#a9a9a9] text-center">{t.chat.no_sessions}</p>
             </div>
           ) : (
-            sessionsQuery.data?.items.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => setSelectedSessionId(session.id)}
-                className="liquid-card p-3 cursor-pointer transition-all duration-200 group flex items-center justify-between"
-                style={{
-                  backgroundColor:
-                    selectedSessionId === session.id
-                      ? "rgba(121, 102, 255, 0.15)"
-                      : undefined,
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <MessageSquare className="w-4 h-4 text-[#7966ff] shrink-0" />
-                  <span className="text-sm text-white truncate">{session.title}</span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteSessionMutation.mutate(session.id) }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-[#a9a9a9] hover:text-[#ff4b44]"
+            allSessions.map((session) => {
+              const isGlobal = isGlobalSession(session)
+              return (
+                <div
+                  key={session.id}
+                  onClick={() => selectSession(session)}
+                  className="liquid-card p-3 cursor-pointer transition-all duration-200 group flex items-center justify-between"
+                  style={{
+                    backgroundColor:
+                      selectedSessionId === session.id
+                        ? "rgba(121, 102, 255, 0.15)"
+                        : undefined,
+                  }}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {isGlobal ? (
+                      <Globe className="w-4 h-4 text-[#22cfff] shrink-0" />
+                    ) : (
+                      <MessageSquare className="w-4 h-4 text-[#7966ff] shrink-0" />
+                    )}
+                    <span className="text-sm text-white truncate">{session.title}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteSessionMutation.mutate({
+                        id: session.id,
+                        scope: isGlobal ? "global" : "company",
+                      })
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-[#a9a9a9] hover:text-[#ff4b44]"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })
           )}
         </div>
       </div>
@@ -413,7 +490,10 @@ export default function Chat() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div
+              className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+              onClick={() => inputRef.current?.focus()}
+            >
               {sessionDetailQuery.isLoading ? (
                 <div className="space-y-4 py-4">
                   <MessageSkeleton align="right" />
@@ -484,6 +564,7 @@ export default function Chat() {
             <div className="p-3 sm:p-4 flex gap-3 items-center" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex-1">
                 <LiquidInput
+                  ref={inputRef}
                   placeholder={t.chat.placeholder}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}

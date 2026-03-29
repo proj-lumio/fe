@@ -103,7 +103,7 @@ export const documentsApi = {
     api.delete(`/companies/${companyId}/documents/${docId}`),
 }
 
-// ── Chat ─────────────────────────────────────────────
+// ── Chat (company-scoped) ────────────────────────────
 
 export const chatApi = {
   listSessions: (companyId?: string) =>
@@ -125,6 +125,28 @@ export const chatApi = {
     const token = localStorage.getItem("lumio-token") ?? ""
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
     return `${proto}//${window.location.host}/api/v1/chat/sessions/${sessionId}/ws?token=${token}`
+  },
+}
+
+// ── General Chat (cross-company) ────────────────────
+
+export const generalChatApi = {
+  listSessions: () =>
+    api.get<{ items: ChatSession[]; total: number }>("/general-chat/sessions").then((r) => r.data),
+
+  createSession: (title?: string) =>
+    api.post<ChatSession>("/general-chat/sessions", { title }).then((r) => r.data),
+
+  getSession: (id: string) =>
+    api.get<ChatSessionDetail>(`/general-chat/sessions/${id}`).then((r) => r.data),
+
+  deleteSession: (id: string) =>
+    api.delete(`/general-chat/sessions/${id}`),
+
+  getWsUrl: (sessionId: string) => {
+    const token = localStorage.getItem("lumio-token") ?? ""
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
+    return `${proto}//${window.location.host}/api/v1/general-chat/sessions/${sessionId}/ws?token=${token}`
   },
 }
 

@@ -125,7 +125,8 @@ export interface MultipartUploadResponse {
 export interface ChatSession {
   id: string
   user_id: string
-  company_id: string
+  company_id: string | null
+  scope?: "company" | "global"
   title: string
   created_at: string
   updated_at: string

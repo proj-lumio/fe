@@ -111,6 +111,7 @@ export const it = {
     placeholder: "Scrivi il tuo messaggio...",
     no_sessions: "Nessuna sessione chat",
     no_messages: "Inizia una conversazione",
+    general: "Generale (Tutte le Aziende)",
     sources: "Fonti",
     vector_results: "Risultati Documenti",
     graph_entities: "Entita Grafo",
